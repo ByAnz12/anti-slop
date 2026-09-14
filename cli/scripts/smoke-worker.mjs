@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import {
+  AGENTS,
   skillSourceDir,
   resolveTargets,
   detectAgents,
@@ -70,6 +71,24 @@ check('D3 hermes project target', hermesProject[0].path, path.join(os.homedir(),
 check('D3 hermes global target', hermesGlobal[0].path, path.join(os.homedir(), '.hermes', 'skills'))
 check('D3 hermes detected in project', detectAgents('project').includes('hermes'), false)
 
+// OpenCode splits its scopes: project folder for a project install, ~/.config for global.
+const ocProject = resolveTargets('project', ['opencode'])
+const ocGlobal = resolveTargets('global', ['opencode'])
+check('D4 opencode project target', ocProject[0].path, path.join(process.cwd(), '.opencode', 'skills'))
+check('D4 opencode global target', ocGlobal[0].path, path.join(os.homedir(), '.config', 'opencode', 'skills'))
+
+// Antigravity reads a project's .agents/skills but not the one under the home dir.
+const agGlobal = resolveTargets('global', ['antigravity'])
+check('D5 antigravity project target', resolveTargets('project', ['antigravity'])[0].path, path.join(process.cwd(), '.agents', 'skills'))
+check('D5 antigravity global target', agGlobal[0].path, path.join(os.homedir(), '.gemini', 'config', 'skills'))
+
+// updatePointers has no other source for the entry file, so no row may omit it.
+check('D6 every agent names an entry file', AGENTS.filter((a) => !a.entry).map((a) => a.id), [])
+
+// A global-only agent installs under the home dir, so a project install of it alone
+// must not drop a pointer naming a skill this project does not have.
+check('D6 hermes writes no project pointer', updatePointers({ targets: resolveTargets('project', ['hermes']), skills }), [])
+
 // Detection now sees the agents that were installed.
 const after = detectAgents('project')
 check('E detected after installs', [...after].sort(), ['antigravity', 'claude', 'cursor', 'gemini', 'opencode'])
@@ -85,6 +104,67 @@ check('G antislop-ui SKILL.md identical', src === dst, true)
 updatePointers({ targets, skills })
 const entry = fs.readFileSync(path.join(process.cwd(), 'CLAUDE.md'), 'utf8')
 check('H blocks after a second run', (entry.match(/antislop:start/g) || []).length, 1)
+
+// The entry file belongs to the author. Each fixture below used to be damaged.
+const entryPath = path.join(process.cwd(), 'CLAUDE.md')
+const write = (text) => fs.writeFileSync(entryPath, text)
+const read = () => fs.readFileSync(entryPath, 'utf8')
+
+write('# Mine\r\n\r\nNotes.\r\n')
+updatePointers({ targets, skills })
+check('I CRLF kept', read().includes('\r\n<!-- antislop:start -->'), true)
+check('I bare LF count', (read().match(/(?<!\r)\n/g) || []).length, 0)
+
+write('# Mine\n\n```md\n<!-- antislop:start -->\n<!-- antislop:end -->\n```\n')
+updatePointers({ targets, skills })
+check('I fenced example untouched', read().includes('```md\n<!-- antislop:start -->\n<!-- antislop:end -->\n```'), true)
+check('I real block added beside it', (read().match(/antislop:start/g) || []).length, 2)
+
+write('# Mine\n<!-- antislop:end -->\n')
+updatePointers({ targets, skills })
+const stable = read()
+updatePointers({ targets, skills })
+check('I orphan marker does not grow', read() === stable, true)
+check('I orphan marker is gone', (read().match(/antislop:end/g) || []).length, 1)
+
+// A fence left open at EOF is a typo, not a boundary: the block lands inside it and has
+// to be found again, or every run appends another copy.
+write('# Mine\n\nNotes:\n\n```bash\nnpm i\n')
+updatePointers({ targets, skills })
+const fenced = read()
+updatePointers({ targets, skills })
+updatePointers({ targets, skills })
+check('J unclosed fence stable', read() === fenced, true)
+check('J unclosed fence keeps code', read().includes('npm i'), true)
+check('J unclosed fence one block', (read().match(/antislop:start/g) || []).length, 1)
+
+// A mistyped end marker is the author's text, so the block is appended, not swapped in.
+write('# Mine\n\n<!-- antislop:start -->\nold\n<!-- antislop:End -->\n\n## Notes\nKeep this line.\n')
+updatePointers({ targets, skills })
+check('J mistyped end keeps the tail', read().includes('Keep this line.'), true)
+check('J mistyped end one block', (read().match(/antislop:start/g) || []).length, 1)
+
+// A longer fence run is not closed by a shorter one inside the example.
+write('# Mine\n\n````md\n```md\n<!-- antislop:start -->\n<!-- antislop:end -->\n```\n````\n')
+updatePointers({ targets, skills })
+check('J four-backtick example untouched', read().includes('````md\n```md\n<!-- antislop:start -->'), true)
+
+// A stray end marker below the block is ours too, and must not survive.
+write('# Mine\n<!-- antislop:start -->\nold\n<!-- antislop:end -->\nTail text\n<!-- antislop:end -->\n')
+updatePointers({ targets, skills })
+check('J stray end below cleared', (read().match(/antislop:end/g) || []).length, 1)
+check('J text below the block kept', read().includes('Tail text'), true)
+
+// Dominant line ending wins, so two CRLF lines do not flip a mostly-LF file.
+write('# Mine\n' + 'line\n'.repeat(10) + 'a\r\nb\r\n')
+updatePointers({ targets, skills })
+check('J mostly-LF stays LF', (read().match(/\r\n/g) || []).length, 0)
+
+// A second marker pair leaves a stray start behind unless every marker line is cleared.
+write('# Mine\n<!-- antislop:start -->\nX\n<!-- antislop:end -->\nKeep this too.\n<!-- antislop:start -->\nY\n<!-- antislop:end -->\n')
+updatePointers({ targets, skills })
+check('J duplicate pair settles to one', (read().match(/antislop:start/g) || []).length, 1)
+check('J duplicate pair keeps text', read().includes('Keep this too.'), true)
 
 if (failures.length > 0) {
   console.error(`\n${failures.length} check(s) failed: ${failures.join(', ')}`)

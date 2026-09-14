@@ -30,7 +30,7 @@ The core prevents slop but cannot invent direction. `DESIGN.md` (yours) supplies
 
 antislop ships as a set of **standard agent skills** (one folder per skill, holding a `SKILL.md`). The core is always loaded; the other skills load only when the task needs them. Pick one of these six paths from this one repo.
 
-**1. The picker (recommended).** One command, then answer the prompts. It asks where to install (this project or everywhere), which agents you use, and which extra skills you want, then copies the folders. On a project install it also writes the pointer that loads antislop every session; a global install writes no pointer and relies on the skills loading themselves by description. Path 2 does not write that pointer, so start here:
+**1. The picker (recommended).** One command, then answer the prompts. It asks which extra skills you want, where to install (this project or everywhere), and which agents you use, then copies the folders. On a project install it also writes the pointer that loads antislop every session; a global install writes no pointer and relies on the skills loading themselves by description. Path 2 does not write that pointer, so start here:
 
 ```bash
 npx antislop-ai
@@ -55,13 +55,13 @@ skills.sh reads the folders straight from this repository, so the listing needs 
 /plugin install antislop@anti-slop
 ```
 
-**4. The plugin (Antigravity).** The same repo is a full Antigravity plugin: a root `plugin.json`, the six skills registered as Antigravity skills, and a `rules/antislop.md` pointer that loads antislop into every session. Install it with the Antigravity CLI:
+**4. The plugin (Antigravity).** The same repo is an Antigravity plugin: a root `plugin.json` plus a `rules/antislop.md` pointer that loads antislop into every session. Install it with the Antigravity CLI:
 
 ```bash
 agy plugin install https://github.com/miqdadbadjuber/anti-slop
 ```
 
-**5. The plugin (Codex).** The same repo is a Codex plugin and marketplace: a `.codex-plugin/plugin.json` manifest plus a `.agents/plugins/marketplace.json` index, both pointing at the shared `skills/` folder. Add the marketplace once, then install the plugin:
+**5. The plugin (Codex).** The same repo is a Codex plugin and marketplace: a `.codex-plugin/plugin.json` manifest that points at the shared `skills/` folder, plus a `.agents/plugins/marketplace.json` index for the repo. Add the marketplace once, then install the plugin:
 
 ```bash
 codex plugin marketplace add miqdadbadjuber/anti-slop
@@ -86,7 +86,9 @@ codex plugin add antislop@anti-slop
 | Gemini CLI | `.gemini/skills/` |
 | Hermes | `~/.hermes/skills/` |
 
-The Gemini CLI row is legacy support: Gemini CLI was sunset on 18 June 2026 and is superseded by Antigravity, which has full support. The picker still installs into `.gemini/skills/` for existing Gemini CLI setups.
+The Gemini CLI row is legacy support. Consumer access ended on 18 June 2026 and Antigravity replaced it, but it was not a total shutdown: enterprise Code Assist licences and paid API keys still work, and the repository is still maintained. The picker still installs into `.gemini/skills/` for existing Gemini CLI setups.
+
+Those are the project paths. A global install writes the same folder under your home directory, with two exceptions: OpenCode's documented global folder is `~/.config/opencode/skills/`, and Antigravity's is `~/.gemini/config/skills/`. The picker writes those instead.
 
 The plugins (paths 3 to 6) are per-agent doors: they load antislop straight from this repo, so there are no skill folders to keep in sync.
 
@@ -139,6 +141,7 @@ What changed in each release. The full tracker, including the cross-agent plugin
 - **v3.2.5** opened the Cursor door: `.cursor-plugin/plugin.json` plus a `.cursor-plugin/marketplace.json` index, skills with a `.mdc` rule pointer. The Codex plugin also gains its app identity: an icon, a brand color, and a banner screenshot.
 - **v3.2.6** merged a five-PR community round: the contrast MCP tool gets a Python launcher that works on macOS too, pointer writes stop touching the user's entry file, the smoke test can now fail (`npm test`), and the repo gains guardrail checks, a CI workflow, and a contributors section.
 - **v3.2.7** is a content round plus an OpenCode door. Three slop patterns earned names: exactly two layout states (a phone stack and a desktop grid) with nothing between (`antislop-layoutmobile`), a comment that runs on for several lines around a one-line fact (`antislop-code`), and the decorative status dot beside a heading that glows and pulses while marking nothing (`antislop-ui`). Your `DESIGN.md` is no longer followed blindly: when it asks for a named slop pattern, the agent names the element and the rule and asks you to keep it or drop it (R-37). OpenCode is verified to load the skills from `.opencode/skills/` via its `AGENTS.md` pointer.
+- **v3.2.8** is a repair round, after re-validating every shipped door against its vendor's current documentation. Antigravity's global install was landing in a folder Antigravity never reads, so it now writes `~/.gemini/config/skills/`; OpenCode's global install moves to the documented `~/.config/opencode/skills/`, which is a tidy-up rather than a fix, since the old path still loads. The entry-file writer was damaging entry files: it replaced text inside code fences, rewrote a CRLF file as LF, grew the file on every run when one marker was unmatched, and deleted everything below a mistyped `start` marker. All four are fixed and covered by tests. The picker also refuses to run without a terminal: with stdin closed it used to print its prompts, install nothing, and still exit 0, so a script driving it saw success.
 
 ## FAQ
 

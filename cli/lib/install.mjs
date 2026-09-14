@@ -7,15 +7,19 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export const CORE = 'antislop'
 
+// Every row carries the entry file it writes, so a new agent cannot be added
+// without one: `entry` is what `updatePointers` needs and nothing else supplies it.
 export const AGENTS = [
-  { id: 'claude', label: 'Claude Code', dir: '.claude/skills' },
-  { id: 'antigravity', label: 'Antigravity', dir: '.agents/skills' },
-  { id: 'codex', label: 'Codex', dir: '.codex/skills' },
-  { id: 'opencode', label: 'OpenCode', dir: '.opencode/skills' },
-  { id: 'cursor', label: 'Cursor', dir: '.cursor/skills' },
-  { id: 'gemini', label: 'Gemini CLI', dir: '.gemini/skills' },
-  // Hermes reads its skills from the home dir only, never from a project folder.
-  { id: 'hermes', label: 'Hermes', dir: '.hermes/skills', globalOnly: true },
+  { id: 'claude', label: 'Claude Code', dir: '.claude/skills', entry: 'CLAUDE.md' },
+  // Antigravity reads a project's .agents/skills, but not the one under the home dir.
+  { id: 'antigravity', label: 'Antigravity', dir: '.agents/skills', globalDir: '.gemini/config/skills', entry: 'AGENTS.md' },
+  { id: 'codex', label: 'Codex', dir: '.codex/skills', entry: 'AGENTS.md' },
+  // OpenCode documents ~/.config/opencode for global skills; ~/.opencode is undocumented.
+  { id: 'opencode', label: 'OpenCode', dir: '.opencode/skills', globalDir: '.config/opencode/skills', entry: 'AGENTS.md' },
+  { id: 'cursor', label: 'Cursor', dir: '.cursor/skills', entry: 'AGENTS.md' },
+  { id: 'gemini', label: 'Gemini CLI', dir: '.gemini/skills', entry: 'GEMINI.md' },
+  // Hermes installs globally only; its project scope is not wired up yet.
+  { id: 'hermes', label: 'Hermes', dir: '.hermes/skills', globalOnly: true, entry: 'AGENTS.md' },
 ]
 
 export function skillSourceDir() {
@@ -30,26 +34,27 @@ function resolveBase(location) {
   return location === 'global' ? os.homedir() : process.cwd()
 }
 
+// A global-only agent always resolves to the home dir, even on a project install.
+// Some agents also keep global skills outside ~/<dir>, like OpenCode's ~/.config.
+function skillPath(agent, location) {
+  const global = location === 'global' || agent.globalOnly
+  const dir = global ? (agent.globalDir ?? agent.dir) : agent.dir
+  return path.join(global ? os.homedir() : resolveBase(location), dir)
+}
+
 export function resolveTargets(location, selected = AGENTS.map((a) => a.id)) {
-  const base = resolveBase(location)
   return AGENTS.filter((a) => selected.includes(a.id)).map((agent) => {
-    // A global-only agent always resolves to the home dir, even on a project install.
-    const targetBase = agent.globalOnly ? os.homedir() : base
-    return {
-      agent,
-      path: path.join(targetBase, agent.dir),
-      exists: fs.existsSync(path.join(targetBase, agent.dir)),
-    }
+    const target = skillPath(agent, location)
+    return { agent, path: target, exists: fs.existsSync(target) }
   })
 }
 
 // Agents whose folder already exists, used to pre-check the picker. A missing
 // folder does not mean a missing agent, so the user can still add one.
 export function detectAgents(location) {
-  const base = resolveBase(location)
   return AGENTS.filter((a) => {
     if (a.globalOnly && location !== 'global') return false
-    return fs.existsSync(path.join(base, a.dir.split('/')[0]))
+    return fs.existsSync(path.dirname(skillPath(a, location)))
   }).map((a) => a.id)
 }
 
@@ -80,6 +85,8 @@ function copyDir(src, dest) {
 
 export function installSkills({ skills, targets, overwrite = false }) {
   const source = skillSourceDir()
+  // Fail with the real reason instead of a TypeError from path.join(null, skill).
+  if (!source) throw new Error('Could not find the antislop skills. Reinstall the antislop package.')
   const written = []
   for (const t of targets) {
     for (const skill of skills) {
@@ -96,17 +103,6 @@ export function installSkills({ skills, targets, overwrite = false }) {
 
 const POINTER_START = '<!-- antislop:start -->'
 const POINTER_END = '<!-- antislop:end -->'
-
-// The entry file each agent reads at session start.
-const ENTRY_FILE = {
-  claude: 'CLAUDE.md',
-  codex: 'AGENTS.md',
-  antigravity: 'AGENTS.md',
-  opencode: 'AGENTS.md',
-  cursor: 'AGENTS.md',
-  gemini: 'GEMINI.md',
-  hermes: 'AGENTS.md',
-}
 
 const SKILL_LINES = {
   [CORE]: 'Core filter, always on: `antislop`',
@@ -130,14 +126,62 @@ function pointerBlock(skills) {
   ]
 }
 
+// A marker inside a code fence is someone's example, not our block. Fence runs are matched
+// by length, and a fence left open at EOF is a typo rather than a boundary.
+function scanMarkers(lines) {
+  const fenced = new Array(lines.length).fill(false)
+  let mark = null
+  let len = 0
+  let from = -1
+  lines.forEach((line, i) => {
+    const m = /^\s*(`{3,}|~{3,})/.exec(line)
+    if (m) {
+      if (!mark) {
+        mark = m[1][0]
+        len = m[1].length
+        from = i
+      } else if (m[1][0] === mark && m[1].length >= len) {
+        mark = null
+        from = -1
+      }
+      fenced[i] = true
+      return
+    }
+    fenced[i] = Boolean(mark)
+  })
+  if (mark) for (let i = from; i < lines.length; i++) fenced[i] = false
+
+  const starts = []
+  const ends = []
+  lines.forEach((line, i) => {
+    if (fenced[i]) return
+    const t = line.trim()
+    if (t === POINTER_START) starts.push(i)
+    else if (t === POINTER_END) ends.push(i)
+  })
+  return { starts, ends }
+}
+
 function writeBlock(entry, block) {
   const existing = fs.existsSync(entry) ? fs.readFileSync(entry, 'utf8') : ''
+  // Follow the file's dominant ending. Keying on "contains any CRLF" would flip a
+  // mostly-LF file, which is the damage this is here to avoid.
+  const crlf = (existing.match(/\r\n/g) || []).length
+  const eol = crlf > (existing.match(/\n/g) || []).length - crlf ? '\r\n' : '\n'
   const lines = existing.split(/\r?\n/)
-  const start = lines.findIndex((l) => l.trim() === POINTER_START)
-  const end = lines.findIndex((l) => l.trim() === POINTER_END)
-  const replacing = start !== -1 && end !== -1 && start < end
-  const head = replacing ? lines.slice(0, start) : lines.slice()
-  const tail = replacing ? lines.slice(end + 1) : []
+  const { starts, ends } = scanMarkers(lines)
+  const start = starts.length ? starts[0] : -1
+  const end = start === -1 ? -1 : ends.find((i) => i > start) ?? -1
+  const paired = start !== -1 && end !== -1
+
+  // Only marker lines are ever removed. Reading a lone start as "the block runs to EOF"
+  // would delete everything the author wrote after a marker they mistyped.
+  const removed = new Set([...starts, ...ends])
+  if (paired) for (let i = start; i <= end; i++) removed.add(i)
+
+  const insertAt = paired ? start : lines.length
+  const head = lines.slice(0, insertAt).filter((_, i) => !removed.has(i))
+  const tail = lines.slice(insertAt).filter((_, i) => !removed.has(insertAt + i))
 
   // Tidy the two seams only: a /\n{3,}/g sweep over the whole document would also
   // collapse blank lines the author wrote inside their code fences.
@@ -145,17 +189,20 @@ function writeBlock(entry, block) {
   while (tail.length && tail[0].trim() === '') tail.shift()
 
   const body = [...head, '', ...block, ...(tail.length ? ['', ...tail] : [])]
-    .join('\n')
-    .replace(/^\n+/, '')
+    .join(eol)
+    .replace(/^\r?\n+/, '')
     .trimEnd()
 
-  fs.writeFileSync(entry, body + '\n')
+  fs.writeFileSync(entry, body + eol)
 }
 
 export function updatePointers({ targets, skills }) {
   const entries = new Set()
   for (const t of targets) {
-    if (fs.existsSync(path.join(t.path, CORE))) entries.add(ENTRY_FILE[t.agent.id])
+    // A global-only agent installs under the home dir even on a project install, so a
+    // pointer here would name a skill this project does not have.
+    if (t.agent.globalOnly) continue
+    if (fs.existsSync(path.join(t.path, CORE))) entries.add(t.agent.entry)
   }
 
   const block = pointerBlock(skills)

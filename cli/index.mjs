@@ -27,15 +27,24 @@ function stop(message) {
   process.exit(0)
 }
 
-// A global-only agent (Hermes) installs into the home dir, never into the project.
-function displayDir(agent) {
-  return agent.globalOnly ? `~/${agent.dir}` : agent.dir
+// Show the folder the chosen location actually writes, not the project one. Agents
+// with their own global folder (OpenCode, Antigravity) and global-only ones differ.
+function displayDir(agent, location) {
+  const global = location === 'global' || agent.globalOnly
+  return global ? `~/${agent.globalDir ?? agent.dir}` : agent.dir
 }
 
 async function main() {
   if (process.argv.includes('--version') || process.argv.includes('-v')) {
-    console.log('antislop 3.2.7')
+    console.log('antislop 3.2.8')
     return
+  }
+
+  // Without a terminal the prompts read EOF at once: the run printed the banner, installed
+  // nothing, and still exited 0, so a script around it saw success. Fail loudly instead.
+  if (!process.stdin.isTTY) {
+    console.error('antislop: this installer needs a terminal. Run `npx antislop-ai` in an interactive shell.')
+    process.exit(1)
   }
 
   console.log(banner())
@@ -73,7 +82,7 @@ async function main() {
     options: AGENTS.map((a) => ({
       value: a.id,
       label: a.label,
-      hint: detected.includes(a.id) ? `found here (${displayDir(a)})` : `will create ${displayDir(a)}`,
+      hint: detected.includes(a.id) ? `found here (${displayDir(a, location)})` : `will create ${displayDir(a, location)}`,
     })),
     required: 'Pick at least one agent.',
     initialValues: detected,

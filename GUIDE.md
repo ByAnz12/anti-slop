@@ -44,9 +44,9 @@ npx antislop-ai
 
 It shows you what antislop has, then asks three things:
 
-- **Which agent(s) you use.** It detects the ones present in your project. Each agent reads antislop from its own folder. On a project install the picker also writes the pointer that reloads antislop in every session; a global install writes no pointer and relies on the skills loading themselves by description. Hermes installs globally (into `~/.hermes/skills/`) because it does not read project folders.
 - **Which skills you want.** The core is always on. The extra skills load only for the work you do. See [What is a skill?](#what-is-a-skill).
 - **Where antislop should live.** This project only, or everywhere on your machine.
+- **Which agent(s) you use.** It detects the ones present in your project. Each agent reads antislop from its own folder. On a project install the picker also writes the pointer that reloads antislop in every session; a global install writes no pointer and relies on the skills loading themselves by description. Hermes installs globally (into `~/.hermes/skills/`); the picker does not write a Hermes project folder yet.
 
 That is the whole install. No agent entry file to write by hand, nothing else to run.
 
@@ -127,15 +127,17 @@ The one-command way installs into the folder your agent reads. This is what it w
 | Gemini CLI | `.gemini/skills/` |
 | Hermes | `~/.hermes/skills/` (global only) |
 
+A global install writes the same folder under your home directory, with two exceptions. OpenCode documents its global skills folder as `~/.config/opencode/skills/`, so the picker writes there rather than to `~/.opencode/skills/`, which OpenCode still reads but does not document. Antigravity reads a project's `.agents/skills/`, but under your home directory it reads `~/.gemini/config/skills/` and not `~/.agents/skills/`, so the picker writes there on a global install.
+
 On a project install the picker also writes the pointer that reloads antislop every session: into the project's `AGENTS.md` for Codex, Antigravity, OpenCode, and Cursor, into `CLAUDE.md` for Claude Code, and into `GEMINI.md` for Gemini CLI. For OpenCode that is the whole mechanism: it loads the skill folders from `.opencode/skills/` and reads the pointer from `AGENTS.md`, which was verified against the opencode CLI.
 
-Gemini CLI is legacy support: it was sunset on 18 June 2026 and superseded by Antigravity. The picker still installs into `.gemini/skills/` for existing Gemini CLI setups.
+Gemini CLI is legacy support. Consumer access ended on 18 June 2026 and Antigravity replaced it, but it was not a total shutdown: enterprise Code Assist licences and paid API keys still work, and the repository is still maintained. The picker still installs into `.gemini/skills/` for existing Gemini CLI setups.
 
 ## What is a skill?
 
 A skill is an optional folder (with a `SKILL.md` inside) that goes deeper into one concern. The core works alone; a skill adds depth for one topic. Skills reference the core rules by number and never duplicate them, so adding one does not change the core.
 
-There are five skills. Pick the one that matches your work:
+There are five skills on top of the core. Pick the one that matches your work:
 
 - **UI work** (look and feel: layout, color, components, animation) → antislop-ui
 - **Copy work** (headlines, buttons, tone, made-up statistics) → antislop-copywriting

@@ -42,6 +42,17 @@ const coreSkill = path.join(tmp, '.claude', 'skills', 'antislop', 'SKILL.md')
 const coreInstalled = fs.existsSync(coreSkill)
 console.log('\ncore SKILL.md exists:', coreInstalled)
 
+// The wizard needs a terminal. With stdin closed it used to print its prompts, install
+// nothing, and still exit 0, so callers saw success. It has to refuse and say why.
+const noTty = spawnSync(process.execPath, [path.join(__dirname, '..', 'index.mjs')], {
+  cwd: tmp,
+  encoding: 'utf8',
+  stdio: ['ignore', 'pipe', 'pipe'],
+})
+const refused = noTty.status === 1 && /needs a terminal/.test(noTty.stderr)
+console.log('no-terminal run: exit', noTty.status, '| refused:', refused)
+if (!refused) reasons.push(`a no-terminal run should exit 1 and say why, got exit ${noTty.status}`)
+
 // Decide before cleaning up, so a failure still leaves a tidy temp dir behind.
 const reasons = []
 if (result.status !== 0) reasons.push(`worker exited ${result.status}`)
