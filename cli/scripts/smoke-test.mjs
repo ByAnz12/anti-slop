@@ -42,21 +42,28 @@ const coreSkill = path.join(tmp, '.claude', 'skills', 'antislop', 'SKILL.md')
 const coreInstalled = fs.existsSync(coreSkill)
 console.log('\ncore SKILL.md exists:', coreInstalled)
 
-// The wizard needs a terminal. With stdin closed it used to print its prompts, install
-// nothing, and still exit 0, so callers saw success. It has to refuse and say why.
-const noTty = spawnSync(process.execPath, [path.join(__dirname, '..', 'index.mjs')], {
-  cwd: tmp,
-  encoding: 'utf8',
-  stdio: ['ignore', 'pipe', 'pipe'],
-})
-const refused = noTty.status === 1 && /needs a terminal/.test(noTty.stderr)
-console.log('no-terminal run: exit', noTty.status, '| refused:', refused)
-if (!refused) reasons.push(`a no-terminal run should exit 1 and say why, got exit ${noTty.status}`)
-
-// Decide before cleaning up, so a failure still leaves a tidy temp dir behind.
+// Every failure is collected here and decided before cleanup, so a failing run
+// still leaves a tidy temp dir behind.
 const reasons = []
 if (result.status !== 0) reasons.push(`worker exited ${result.status}`)
 if (!coreInstalled) reasons.push('core SKILL.md was not installed')
+
+// The wizard needs a terminal. With stdin closed it used to print its prompts, install
+// nothing, and still exit 0, so callers saw success. It has to refuse and say why.
+// Loading it needs the cli's dependencies, so a bare checkout reports a skip instead.
+const cliDeps = fs.existsSync(path.join(__dirname, '..', 'node_modules', '@clack'))
+if (cliDeps) {
+  const noTty = spawnSync(process.execPath, [path.join(__dirname, '..', 'index.mjs')], {
+    cwd: tmp,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
+  const refused = noTty.status === 1 && /needs a terminal/.test(noTty.stderr)
+  console.log('no-terminal run: exit', noTty.status, '| refused:', refused)
+  if (!refused) reasons.push(`a no-terminal run should exit 1 and say why, got exit ${noTty.status}`)
+} else {
+  console.log('no-terminal run: skipped, cli dependencies are not installed')
+}
 
 fs.rmSync(tmp, { recursive: true, force: true })
 console.log('\ncleaned up temp project.')
