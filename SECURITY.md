@@ -11,9 +11,9 @@ As of v3.1.3, Gen Agent Trust Hub rates antislop **Warn (MEDIUM)** on two findin
 The report notes that antislop appends a pointer block to an agent entry file such as `CLAUDE.md` or `AGENTS.md`. This is how a filter that runs on everything stays loaded: the entry file names the installed skills, so the next session reads them. The pointer block:
 
 - is a static markdown reference. It lists the installed skills and carries no executable content.
-- is written only after you approve. The picker and the manual wizard both ask first.
+- is written only after you approve. The installer and the manual wizard both ask first.
 - is added at the end of the entry file on a first install, and replaced in place on later runs. Nothing else in the file is touched: your prose, blank lines, code blocks, and line endings are left as they are, and the only lines it ever removes are antislop's own marker comments.
-- lives in [cli/lib/install.mjs](cli/lib/install.mjs) for the picker, and in the wizard inside [antislop.md](antislop.md) for the manual path.
+- lives in [cli/lib/install.mjs](cli/lib/install.mjs) for the installer, and in the wizard inside [antislop.md](antislop.md) for the manual path.
 
 Removing this behavior would remove the core promise: a filter that is always on, not one you remember to invoke. Any always-on ruleset that writes a reference to an entry file matches this pattern.
 
