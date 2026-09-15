@@ -27,16 +27,15 @@ function stop(message) {
   process.exit(0)
 }
 
-// Show the folder the chosen location actually writes, not the project one. Agents
-// with their own global folder (OpenCode, Antigravity) and global-only ones differ.
+// Show the folder the chosen location actually writes. Agents with their own global
+// folder (OpenCode, Antigravity) differ from the project one.
 function displayDir(agent, location) {
-  const global = location === 'global' || agent.globalOnly
-  return global ? `~/${agent.globalDir ?? agent.dir}` : agent.dir
+  return location === 'global' ? `~/${agent.globalDir ?? agent.dir}` : agent.dir
 }
 
 async function main() {
   if (process.argv.includes('--version') || process.argv.includes('-v')) {
-    console.log('antislop 3.2.8')
+    console.log('antislop 3.2.9')
     return
   }
 
@@ -101,8 +100,8 @@ async function main() {
     const answer = await select({
       message: `${conflicts.length} skill folder(s) already exist. What should I do?`,
       options: [
-        { value: 'overwrite', label: 'Overwrite them', hint: 'replace existing files' },
-        { value: 'keep', label: 'Keep what is there', hint: 'skip existing folders' },
+        { value: 'overwrite', label: 'Overwrite them', hint: 'replace with this version' },
+        { value: 'keep', label: 'Keep what is there', hint: 'leave the old version in place' },
       ],
     })
     if (isCancel(answer)) stop('Install cancelled.')
@@ -128,10 +127,19 @@ async function main() {
   const agentCount = new Set(written.map((w) => w.agent.id)).size
   if (written.length > 0) {
     outro(`Installed ${written.length} skill(s) into ${agentCount} agent folder(s).`)
+    console.log(pc.dim('antislop is ready. The next agent session loads it.'))
   } else {
+    // "Existing folders were kept" used to read as success. The copies are the
+    // old release, so say that plainly and name the choice that fixes it.
     outro('Nothing new to install. Existing folders were kept.')
+    console.log(pc.dim('They may be older than this release. To update, run it again and pick "Overwrite them".'))
   }
-  console.log(pc.dim('antislop is ready. The next agent session loads it.'))
+
+  // Hermes gates project skills behind a one-time, per-repo trust step, so name it here
+  // rather than let the user meet it as a banner after the install looked finished.
+  if (location === 'project' && targets.some((t) => t.agent.id === 'hermes')) {
+    log.warn('Hermes needs one more step: run `hermes skills trust` in this project.')
+  }
 }
 
 main().catch((err) => {

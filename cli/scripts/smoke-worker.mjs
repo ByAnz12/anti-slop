@@ -64,12 +64,14 @@ for (const agent of ['opencode', 'cursor', 'gemini']) {
   check(`D2 ${agent} folder exists`, fs.existsSync(path.join(process.cwd(), agent === 'gemini' ? '.gemini' : agent === 'cursor' ? '.cursor' : '.opencode', 'skills', 'antislop', 'SKILL.md')), true)
 }
 
-// Hermes is global-only: a project install still resolves to the home dir.
+// Hermes reads a project's .hermes/skills, and ~/.hermes/skills for a global install.
 const hermesProject = resolveTargets('project', ['hermes'])
 const hermesGlobal = resolveTargets('global', ['hermes'])
-check('D3 hermes project target', hermesProject[0].path, path.join(os.homedir(), '.hermes', 'skills'))
+check('D3 hermes project target', hermesProject[0].path, path.join(process.cwd(), '.hermes', 'skills'))
 check('D3 hermes global target', hermesGlobal[0].path, path.join(os.homedir(), '.hermes', 'skills'))
-check('D3 hermes detected in project', detectAgents('project').includes('hermes'), false)
+const hermesWritten = installSkills({ skills, targets: hermesProject, overwrite: false })
+check('D3 hermes written into the project', hermesWritten.length, 2)
+check('D3 hermes detected in project', detectAgents('project').includes('hermes'), true)
 
 // OpenCode splits its scopes: project folder for a project install, ~/.config for global.
 const ocProject = resolveTargets('project', ['opencode'])
@@ -85,13 +87,12 @@ check('D5 antigravity global target', agGlobal[0].path, path.join(os.homedir(), 
 // updatePointers has no other source for the entry file, so no row may omit it.
 check('D6 every agent names an entry file', AGENTS.filter((a) => !a.entry).map((a) => a.id), [])
 
-// A global-only agent installs under the home dir, so a project install of it alone
-// must not drop a pointer naming a skill this project does not have.
-check('D6 hermes writes no project pointer', updatePointers({ targets: resolveTargets('project', ['hermes']), skills }), [])
+// Hermes reads a project's AGENTS.md, so a project install of it must write the pointer.
+check('D6 hermes writes a project pointer', updatePointers({ targets: hermesProject, skills }).map((p) => path.basename(p)), ['AGENTS.md'])
 
 // Detection now sees the agents that were installed.
 const after = detectAgents('project')
-check('E detected after installs', [...after].sort(), ['antigravity', 'claude', 'cursor', 'gemini', 'opencode'])
+check('E detected after installs', [...after].sort(), ['antigravity', 'claude', 'cursor', 'gemini', 'hermes', 'opencode'])
 
 const globalTargets = resolveTargets('global', ['claude', 'codex'])
 console.log('F global targets:', globalTargets.map((t) => `${t.agent.id}@${t.path}`).join(' | '))

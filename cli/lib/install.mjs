@@ -18,8 +18,8 @@ export const AGENTS = [
   { id: 'opencode', label: 'OpenCode', dir: '.opencode/skills', globalDir: '.config/opencode/skills', entry: 'AGENTS.md' },
   { id: 'cursor', label: 'Cursor', dir: '.cursor/skills', entry: 'AGENTS.md' },
   { id: 'gemini', label: 'Gemini CLI', dir: '.gemini/skills', entry: 'GEMINI.md' },
-  // Hermes installs globally only; its project scope is not wired up yet.
-  { id: 'hermes', label: 'Hermes', dir: '.hermes/skills', globalOnly: true, entry: 'AGENTS.md' },
+  // Hermes reads a project's .hermes/skills and .agents/skills, project tier first.
+  { id: 'hermes', label: 'Hermes', dir: '.hermes/skills', entry: 'AGENTS.md' },
 ]
 
 export function skillSourceDir() {
@@ -34,12 +34,10 @@ function resolveBase(location) {
   return location === 'global' ? os.homedir() : process.cwd()
 }
 
-// A global-only agent always resolves to the home dir, even on a project install.
-// Some agents also keep global skills outside ~/<dir>, like OpenCode's ~/.config.
+// Some agents keep global skills outside ~/<dir>, like OpenCode's ~/.config.
 function skillPath(agent, location) {
-  const global = location === 'global' || agent.globalOnly
-  const dir = global ? (agent.globalDir ?? agent.dir) : agent.dir
-  return path.join(global ? os.homedir() : resolveBase(location), dir)
+  const dir = location === 'global' ? (agent.globalDir ?? agent.dir) : agent.dir
+  return path.join(resolveBase(location), dir)
 }
 
 export function resolveTargets(location, selected = AGENTS.map((a) => a.id)) {
@@ -52,10 +50,7 @@ export function resolveTargets(location, selected = AGENTS.map((a) => a.id)) {
 // Agents whose folder already exists, used to pre-check the picker. A missing
 // folder does not mean a missing agent, so the user can still add one.
 export function detectAgents(location) {
-  return AGENTS.filter((a) => {
-    if (a.globalOnly && location !== 'global') return false
-    return fs.existsSync(path.dirname(skillPath(a, location)))
-  }).map((a) => a.id)
+  return AGENTS.filter((a) => fs.existsSync(path.dirname(skillPath(a, location)))).map((a) => a.id)
 }
 
 export function detectConflicts({ skills, targets }) {
@@ -199,9 +194,6 @@ function writeBlock(entry, block) {
 export function updatePointers({ targets, skills }) {
   const entries = new Set()
   for (const t of targets) {
-    // A global-only agent installs under the home dir even on a project install, so a
-    // pointer here would name a skill this project does not have.
-    if (t.agent.globalOnly) continue
     if (fs.existsSync(path.join(t.path, CORE))) entries.add(t.agent.entry)
   }
 
