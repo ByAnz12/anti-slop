@@ -37,7 +37,7 @@ Three of the four builds. The first uses neither tool, the second only antislop,
 | **Nothing at all** | **antislop alone** | **`DESIGN.md` alone** |
 |:--|:--|:--|
 | <a href="assets/compare/ui/without.webp"><img src="assets/compare/ui/without.webp" alt="A generic landing page: a sparkle logo, a NEXT-GEN AI 2.0 beta pill above the headline, and a fake terminal reporting 0.0001ms latency" width="100%"></a> | <a href="assets/compare/ui/w-antislop.webp"><img src="assets/compare/ui/w-antislop.webp" alt="The same page with antislop: honest copy on a restrained dark layout with a single accent colour" width="100%"></a> | <a href="assets/compare/ui/w-design.webp"><img src="assets/compare/ui/w-design.webp" alt="The same page with DESIGN.md only: a photographic hero, with the stat cards still reading 10,000% ROI Synergy Multiplier and a 5.0 rating from 500,000 founders" width="100%"></a> |
-| No antislop and no `DESIGN.md`, which is where most AI output starts: a sparkle logo, a beta pill above the headline, and a terminal reporting 0.0001ms latency. | The invented numbers, the sparkle logo and the beta pill are gone, so the page is honest. It is also plain, because beauty was never the filter's job. | The direction lands, with a real mood and a real hero image. Every number on the page is still invented, because good taste does not filter anything. |
+| Where most AI output starts: a sparkle logo, a beta pill, and a fake terminal. | Honest, because the filter removed the invented numbers. Plain, because beauty is not its job. | The direction lands, but the slop stays, because `DESIGN.md` directs and does not filter. |
 
 The fourth uses both, and it is the only one of the four that is clean and directed at the same time:
 
