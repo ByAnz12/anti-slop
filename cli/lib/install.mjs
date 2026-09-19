@@ -9,17 +9,21 @@ export const CORE = 'antislop'
 
 // Every row carries the entry file it writes, so a new agent cannot be added
 // without one: `entry` is what `updatePointers` needs and nothing else supplies it.
+// `readsAlso` lists the other project folders the agent loads skills from besides its
+// own, so a duplicate can be named instead of discovered later as a missing skill.
 export const AGENTS = [
   { id: 'claude', label: 'Claude Code', dir: '.claude/skills', entry: 'CLAUDE.md' },
   // Antigravity reads a project's .agents/skills, but not the one under the home dir.
   { id: 'antigravity', label: 'Antigravity', dir: '.agents/skills', globalDir: '.gemini/config/skills', entry: 'AGENTS.md' },
   { id: 'codex', label: 'Codex', dir: '.codex/skills', entry: 'AGENTS.md' },
   // OpenCode documents ~/.config/opencode for global skills; ~/.opencode is undocumented.
-  { id: 'opencode', label: 'OpenCode', dir: '.opencode/skills', globalDir: '.config/opencode/skills', entry: 'AGENTS.md' },
+  { id: 'opencode', label: 'OpenCode', dir: '.opencode/skills', globalDir: '.config/opencode/skills', readsAlso: ['.claude/skills', '.agents/skills'], entry: 'AGENTS.md' },
   { id: 'cursor', label: 'Cursor', dir: '.cursor/skills', entry: 'AGENTS.md' },
   { id: 'gemini', label: 'Gemini CLI', dir: '.gemini/skills', entry: 'GEMINI.md' },
   // Hermes reads a project's .hermes/skills and .agents/skills, project tier first.
-  { id: 'hermes', label: 'Hermes', dir: '.hermes/skills', entry: 'AGENTS.md' },
+  { id: 'hermes', label: 'Hermes', dir: '.hermes/skills', readsAlso: ['.agents/skills'], entry: 'AGENTS.md' },
+  // Copilot reads the shared .agents/skills folder, so it shares Antigravity's target.
+  { id: 'copilot', label: 'GitHub Copilot', dir: '.agents/skills', entry: 'AGENTS.md' },
 ]
 
 export function skillSourceDir() {
@@ -40,11 +44,34 @@ function skillPath(agent, location) {
   return path.join(resolveBase(location), dir)
 }
 
+// Agents that share a folder share a target, so the skills are copied once and the
+// conflict count matches the folders on disk rather than the agents selected.
 export function resolveTargets(location, selected = AGENTS.map((a) => a.id)) {
-  return AGENTS.filter((a) => selected.includes(a.id)).map((agent) => {
+  const byPath = new Map()
+  for (const agent of AGENTS.filter((a) => selected.includes(a.id))) {
     const target = skillPath(agent, location)
-    return { agent, path: target, exists: fs.existsSync(target) }
-  })
+    const found = byPath.get(target)
+    if (found) found.agents.push(agent)
+    else byPath.set(target, { agents: [agent], path: target, exists: fs.existsSync(target) })
+  }
+  return [...byPath.values()]
+}
+
+// OpenCode and Hermes read more than one project folder, so installing into two of them
+// puts the same skill names in both. Neither documents which copy wins, so name it.
+export function detectDuplicateReads({ targets, location }) {
+  if (location !== 'project') return []
+  const paths = new Set(targets.map((t) => t.path))
+  const found = []
+  for (const t of targets) {
+    for (const agent of t.agents) {
+      const others = (agent.readsAlso ?? [])
+        .map((d) => path.join(resolveBase(location), d))
+        .filter((p) => paths.has(p))
+      if (others.length > 0) found.push({ agent, paths: [t.path, ...others] })
+    }
+  }
+  return found
 }
 
 // Agents whose folder already exists, used to pre-check the picker. A missing
@@ -90,7 +117,7 @@ export function installSkills({ skills, targets, overwrite = false }) {
       const dest = path.join(t.path, skill)
       if (fs.existsSync(dest) && !overwrite) continue
       copyDir(src, dest)
-      written.push({ skill, agent: t.agent, path: dest })
+      written.push({ skill, agents: t.agents.map((a) => a.id), path: dest })
     }
   }
   return written
@@ -194,7 +221,7 @@ function writeBlock(entry, block) {
 export function updatePointers({ targets, skills }) {
   const entries = new Set()
   for (const t of targets) {
-    if (fs.existsSync(path.join(t.path, CORE))) entries.add(t.agent.entry)
+    if (fs.existsSync(path.join(t.path, CORE))) for (const a of t.agents) entries.add(a.entry)
   }
 
   const block = pointerBlock(skills)

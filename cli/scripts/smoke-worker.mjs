@@ -7,6 +7,7 @@ import {
   resolveTargets,
   detectAgents,
   detectConflicts,
+  detectDuplicateReads,
   installSkills,
   updatePointers,
 } from '../lib/install.mjs'
@@ -28,14 +29,17 @@ const check = (label, actual, expected) => {
 const fresh = detectAgents('project')
 check('A detected (fresh project)', fresh, [])
 const defaultTargets = resolveTargets('project')
-console.log('A default targets:', defaultTargets.map((t) => `${t.agent.id}@${t.path} exists=${t.exists}`).join(' | '), '(expect all seven, exists=false)')
+console.log('A default targets:', defaultTargets.map((t) => `${t.agents.map((a) => a.id).join('+')}@${t.path} exists=${t.exists}`).join(' | '))
+// Copilot shares Antigravity's folder, so eight agents resolve to seven folders.
+check('A eight agents over seven folders', [AGENTS.length, defaultTargets.length], [8, 7])
+check('A copilot shares the antigravity folder', resolveTargets('project', ['antigravity', 'copilot']).length, 1)
 
 // Claude Code only, via explicit selection (old behavior preserved).
 const targets = resolveTargets('project', ['claude'])
 let written = installSkills({ skills, targets, overwrite: false })
 let pointers = updatePointers({ targets, skills })
-console.log('B targets:', targets.map((t) => `${t.agent.id}@${t.path} exists=${t.exists}`).join(' | '))
-console.log('B written:', written.map((w) => `${w.agent.id}:${w.skill}`).join(', '))
+console.log('B targets:', targets.map((t) => `${t.agents.map((a) => a.id).join('+')}@${t.path} exists=${t.exists}`).join(' | '))
+console.log('B written:', written.map((w) => `${w.agents.join('+')}:${w.skill}`).join(', '))
 check('B pointers', pointers.map((p) => path.basename(p)), ['CLAUDE.md'])
 
 const conflicts = detectConflicts({ skills, targets })
@@ -47,7 +51,7 @@ check('C overwritten', written.length, 2)
 
 // Antigravity on a fresh project: .agents/ does not exist yet, install creates it.
 const agTargets = resolveTargets('project', ['antigravity'])
-console.log('D antigravity targets:', agTargets.map((t) => `${t.agent.id}@${t.path} exists=${t.exists}`).join(' | '), '(exists=false before install)')
+console.log('D antigravity targets:', agTargets.map((t) => `${t.agents.map((a) => a.id).join('+')}@${t.path} exists=${t.exists}`).join(' | '), '(exists=false before install)')
 const agWritten = installSkills({ skills, targets: agTargets, overwrite: false })
 check('D antigravity written', agWritten.length, 2)
 const agPointers = updatePointers({ targets: agTargets, skills })
@@ -92,10 +96,17 @@ check('D6 hermes writes a project pointer', updatePointers({ targets: hermesProj
 
 // Detection now sees the agents that were installed.
 const after = detectAgents('project')
-check('E detected after installs', [...after].sort(), ['antigravity', 'claude', 'cursor', 'gemini', 'hermes', 'opencode'])
+check('E detected after installs', [...after].sort(), ['antigravity', 'claude', 'copilot', 'cursor', 'gemini', 'hermes', 'opencode'])
+
+// OpenCode reads .claude/skills and .agents/skills too, so a project that installs into
+// two of them holds the same names twice and OpenCode picks between them unpredictably.
+const dupReads = detectDuplicateReads({ targets: resolveTargets('project', ['claude', 'opencode']), location: 'project' })
+check('E duplicate read named', dupReads.map((d) => [d.agent.id, d.paths.length]), [['opencode', 2]])
+check('E one folder alone is not a duplicate', detectDuplicateReads({ targets: resolveTargets('project', ['opencode']), location: 'project' }), [])
+check('E global scope is not checked', detectDuplicateReads({ targets: resolveTargets('global', ['claude', 'opencode']), location: 'global' }), [])
 
 const globalTargets = resolveTargets('global', ['claude', 'codex'])
-console.log('F global targets:', globalTargets.map((t) => `${t.agent.id}@${t.path}`).join(' | '))
+console.log('F global targets:', globalTargets.map((t) => `${t.agents.map((a) => a.id).join('+')}@${t.path}`).join(' | '))
 
 // Copies are identical and the pointer block dedupes.
 const src = fs.readFileSync(path.join(skillSourceDir(), 'antislop-ui', 'SKILL.md'), 'utf8')

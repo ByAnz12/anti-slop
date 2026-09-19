@@ -10,6 +10,7 @@ import {
   resolveTargets,
   detectAgents,
   detectConflicts,
+  detectDuplicateReads,
   installSkills,
   updatePointers,
 } from './lib/install.mjs'
@@ -35,7 +36,7 @@ function displayDir(agent, location) {
 
 async function main() {
   if (process.argv.includes('--version') || process.argv.includes('-v')) {
-    console.log('antislop 3.2.9')
+    console.log('antislop 3.2.10')
     return
   }
 
@@ -124,7 +125,7 @@ async function main() {
     log.step('Pointer written to ' + pointers.map((p) => path.basename(p)).join(', '))
   }
 
-  const agentCount = new Set(written.map((w) => w.agent.id)).size
+  const agentCount = new Set(written.flatMap((w) => w.agents)).size
   if (written.length > 0) {
     outro(`Installed ${written.length} skill(s) into ${agentCount} agent folder(s).`)
     console.log(pc.dim('antislop is ready. The next agent session loads it.'))
@@ -137,8 +138,17 @@ async function main() {
 
   // Hermes gates project skills behind a one-time, per-repo trust step, so name it here
   // rather than let the user meet it as a banner after the install looked finished.
-  if (location === 'project' && targets.some((t) => t.agent.id === 'hermes')) {
+  if (location === 'project' && targets.some((t) => t.agents.some((a) => a.id === 'hermes'))) {
     log.warn('Hermes needs one more step: run `hermes skills trust` in this project.')
+  }
+
+  // Two folders holding the same skill names is how a skill goes missing in OpenCode,
+  // which reads both and does not document which copy it keeps.
+  for (const dup of detectDuplicateReads({ targets, location })) {
+    log.warn(
+      `${dup.agent.label} reads both ${dup.paths.join(' and ')}, and antislop is now in both. ` +
+        'It may load either copy. Remove one of them to be safe.'
+    )
   }
 }
 

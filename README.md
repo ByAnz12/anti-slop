@@ -141,10 +141,13 @@ Every skill is a folder of the open Agent Skills standard (`<name>/SKILL.md`), s
 | Cursor | `.cursor/skills/` |
 | Gemini CLI | `.gemini/skills/` |
 | Hermes | `.hermes/skills/` |
+| GitHub Copilot | `.agents/skills/` |
 
 The Gemini CLI row is legacy support: Antigravity replaced it, but the installer still writes there for existing setups.
 
-Those are the project paths. A global install writes the same folder under your home directory, with two exceptions: OpenCode writes to `~/.config/opencode/skills/`, and Antigravity to `~/.gemini/config/skills/`.
+Antigravity and Copilot share one folder. Copilot also reads `.github/skills/` and `.claude/skills/`, but the installer writes the folder they have in common, so picking both installs antislop once.
+
+Those are the project paths. A global install writes the same folder under your home directory, with two exceptions: OpenCode writes to `~/.config/opencode/skills/`, and Antigravity to `~/.gemini/config/skills/`. Copilot is the one agent that also reads the home-level `.agents/skills/`.
 
 Hermes needs one extra step after a project install: it will not load skills out of a cloned repository until you run `hermes skills trust` once in that project.
 
@@ -186,14 +189,14 @@ antislop is used one of two ways, chosen at the start of a session:
 
 ## Roadmap
 
-**v3.2.9** is the current release.
+**v3.2.10** is the current release.
 
-- **Hermes gains its project scope.** The installer now writes `<project>/.hermes/skills/` and the `AGENTS.md` pointer, because Hermes does read a project's skills and ranks them above the global ones. It will not load skills out of a cloned repository until you say that repository is yours, so the installer names the one-time `hermes skills trust` step.
-- **The install documentation is rewritten end to end.** Both routes now run from opening a terminal to a verified install, every route documents updating and removing, and the phone and chat-window route is written down for the first time.
-- **Cursor's install command is corrected.** `/add-plugin <url>` was never a Cursor command; the documented route is `agent plugin marketplace add <url>`, then Install in the Customize panel.
-- **The installer's conflict prompt is clearer.** It now says which choice updates and which one quietly leaves the old version in place.
-- **Two content fixes came out of a live generate-test.** **Eyebrow Badge Above the Headline** earns a name: a pill parked above the H1 holding a category label the headline already says. The core also now states that direction resolution (R-37), asset clarification (R-23), and the Delivery Gate run in both modes, whichever other skill or planning workflow is leading the session.
-- **The README gains a comparison section.** One brief generated four times over, then before-and-after pairs for copy and code.
+- **GitHub Copilot is an installer target.** It loads skills from `.github/skills`, `.claude/skills`, or `.agents/skills`, so it shares the `.agents/skills` folder other agents already use and reads the same `AGENTS.md` pointer. No new folder, no new file. GitHub's skill support is young, so treat this door as early.
+- **The installer stops writing the same skills twice.** Agents that share a folder now share one install instead of one each, and the conflict prompt counts folders rather than agents, so it stops reporting more folders than exist.
+- **OpenCode gets told about a collision.** OpenCode reads `.opencode/skills`, `.claude/skills`, and `.agents/skills` at once and documents no precedence between them. When two of those hold antislop, the installer now names both instead of leaving you to find a missing skill later.
+- **Claude Code and `AGENTS.md`.** Since v2.1.277 Claude Code reads `AGENTS.md` when a project has no `CLAUDE.md`. antislop keeps writing `CLAUDE.md`, because a `CLAUDE.md` anywhere above the working directory makes Claude ignore `AGENTS.md` entirely.
+- **Copilot has no plugin door.** The roadmap promised a marketplace command; there is none to ship, because Copilot Extensions in the GitHub Marketplace are applications rather than repo manifests.
+- **R-02 stops contradicting itself.** The core called the em dash ban absolute, while `antislop-copywriting` excepted a user's own voice in three places, so the most recognisable AI tell could survive the filter. R-02 now scopes the ban to text the agent writes, and a user's sample goes through R-37 instead: name it, ask, never decide silently.
 
 Every earlier release, and what comes next, is in [ROADMAP.md](ROADMAP.md).
 
@@ -207,7 +210,7 @@ No, a filter. It does not prescribe colors, fonts, or layouts. It rejects techni
 
 All of them, but the install paths differ:
 
-- **The installer and the skills directory** support Claude Code, Codex, Antigravity, OpenCode, Cursor, Gemini CLI, and Hermes (the installer detects each agent's skill folder). These are the recommended paths.
+- **The installer and the skills directory** support Claude Code, Codex, Antigravity, OpenCode, Cursor, Gemini CLI, Hermes, and GitHub Copilot (the installer detects each agent's skill folder). These are the recommended paths.
 - **The plugins** are per-agent doors: the Claude Code marketplace plugin (path 3), the Antigravity plugin (path 4), the Codex plugin (path 5), and the Cursor plugin (path 6), all installed from the same repo.
 - **The single file** (`antislop.md`) works with any agent that reads plain Markdown, including a plain chat window.
 

@@ -36,7 +36,7 @@ There are four routes in, and the difference between them matters more than it l
 
 | Route | What it does | Works on |
 |-------|--------------|----------|
-| **The installer** | Copies the skill folders into your project or your home folder | Seven agents, no setup beyond a terminal |
+| **The installer** | Copies the skill folders into your project or your home folder | Eight agents, no setup beyond a terminal |
 | **The skills directory** | Copies the same folders using the skills.sh tool | The agents that directory supports |
 | **A plugin door** | Loads antislop straight from this repository, nothing copied | Claude Code, Antigravity, Codex, Cursor |
 | **The single file** | One Markdown file you hand to any AI | Anything that reads text, including a phone |
@@ -45,7 +45,7 @@ Pick one. They load the same rules, so adding a second only gives you a second t
 
 ### Which route should I pick?
 
-- **The installer** if you want antislop in one project or everywhere, and you use any of the seven agents. It is the only route that covers OpenCode, Gemini CLI, and Hermes, and the only one that detects your agents for you.
+- **The installer** if you want antislop in one project or everywhere, and you use any of the eight agents. It is the only route that covers OpenCode, Gemini CLI, Hermes, and GitHub Copilot, and the only one that detects your agents for you.
 - **The skills directory** if you already use that directory's tool and want the folders without the installer's questions. It writes no pointer, so antislop reloads by description alone.
 - **A plugin door** if you use Claude Code, Antigravity, Codex, or Cursor and would rather not keep a copy in your project. You get updates from the plugin's own update command instead of re-running an installer.
 - **The single file** if you have no terminal, or you want antislop in a chat window or on a phone.
@@ -359,10 +359,17 @@ The installer writes into the folder your agent reads. This is what it writes an
 | Cursor | `.cursor/skills/` |
 | Gemini CLI | `.gemini/skills/` |
 | Hermes | `.hermes/skills/` |
+| GitHub Copilot | `.agents/skills/` |
 
-A global install writes the same folder under your home directory, with two exceptions. OpenCode documents its global skills folder as `~/.config/opencode/skills/`, so the installer writes there rather than to `~/.opencode/skills/`, which OpenCode still reads but does not document. Antigravity reads a project's `.agents/skills/`, but under your home directory it reads `~/.gemini/config/skills/` and not `~/.agents/skills/`, so the installer writes there on a global install.
+A global install writes the same folder under your home directory, with two exceptions. OpenCode documents its global skills folder as `~/.config/opencode/skills/`, so the installer writes there rather than to `~/.opencode/skills/`, which OpenCode still reads but does not document. Antigravity reads a project's `.agents/skills/`, but under your home directory it reads `~/.gemini/config/skills/` and not `~/.agents/skills/`, so the installer writes there on a global install. Copilot is the one agent that does read the home-level `.agents/skills/`, so a global install reaches it through the folder name a project install uses.
 
-On a project install the installer also writes the pointer that reloads antislop every session: into the project's `AGENTS.md` for Codex, Antigravity, OpenCode, Cursor, and Hermes, into `CLAUDE.md` for Claude Code, and into `GEMINI.md` for Gemini CLI. For OpenCode that is the whole mechanism: it loads the skill folders from `.opencode/skills/` and reads the pointer from `AGENTS.md`, which was verified against the opencode CLI.
+Antigravity and Copilot share `.agents/skills/`. Copilot also reads `.github/skills/` and `.claude/skills/`, but there is no reason to write a second copy, so picking both installs once.
+
+**One agent reading two of these is a problem.** OpenCode loads skills from `.opencode/skills/`, `.claude/skills/`, and `.agents/skills/`, and its documentation asks that skill names be unique across every location while never saying which copy wins if they are not. So if you install for OpenCode and for Claude Code, or for OpenCode and for Antigravity, the same skill names land in two folders it reads. The installer names that when it happens, and the fix is to remove the copy you do not need, usually the `.opencode/skills/` one, since OpenCode reads the other folder by its own documentation.
+
+On a project install the installer also writes the pointer that reloads antislop every session: into the project's `AGENTS.md` for Codex, Antigravity, OpenCode, Cursor, Hermes, and Copilot, into `CLAUDE.md` for Claude Code, and into `GEMINI.md` for Gemini CLI. For OpenCode that is the whole mechanism: it loads the skill folders from `.opencode/skills/` and reads the pointer from `AGENTS.md`, which was verified against the opencode CLI.
+
+**Claude Code reads `AGENTS.md` too, since v2.1.277.** antislop still writes `CLAUDE.md` for it, because the two are not equal: Claude reads `AGENTS.md` only when no `CLAUDE.md` or `CLAUDE.local.md` exists in the working directory or any directory above it. In a project that has one, an `AGENTS.md`-only pointer would be ignored without an error. The setting under **Project instructions** in `/config` can change that, and `AGENTS.md` is not read at all on Bedrock, Vertex, or Foundry.
 
 **Hermes needs one more step.** Hermes reads a project's `.hermes/skills/`, and a project's skills outrank your global ones, but it will not load skills out of a cloned repository until you say that repository is yours. After a project install, run this once in that project:
 
