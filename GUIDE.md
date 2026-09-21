@@ -224,6 +224,8 @@ The installer, the skills directory, and the plugin doors all need a terminal, s
 
 Nothing here is automatic unless a route below says it is. Every route updates by running that route's own command again, or by replacing the copy you made.
 
+**First, how do you know a new version is out?** Nothing notifies you. Two places always carry the current one: the [releases page](https://github.com/miqdadbadjuber/anti-slop/releases) and the version badge at the top of the [README](README.md). Compare that against what you have, then use your route's section below. The installer route can skip the comparison, because its own command prints the version it would fetch.
+
 ### The installer
 
 The installer copies files, so your project holds a snapshot. When a new version is released, run the same command again:
@@ -436,7 +438,7 @@ If your `DESIGN.md` happens to ask for something antislop counts as slop, it doe
 
 ## Where is this going?
 
-antislop is packaged three ways at once: standard skill folders, native plugins for Claude Code, Antigravity, Codex, and Cursor, and the single-file core that works anywhere. Agent support grows over time. For the current release and what comes next, see the [roadmap](ROADMAP.md). For the full picture of every skill, see the [README](README.md).
+antislop is packaged three ways at once: standard skill folders, native plugins for Claude Code, Antigravity, Codex, Cursor, and Kimi Code, and the single-file core that works anywhere. Agent support grows over time. For the current release and what comes next, see the [roadmap](ROADMAP.md). For the full picture of every skill, see the [README](README.md).
 
 ## Feedback
 
