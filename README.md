@@ -217,11 +217,12 @@ antislop is used one of two ways, chosen at the start of a session:
 
 ## Roadmap
 
-**v3.2.12** is the current release.
+**v3.2.13** is the current release.
 
-- **Kimi Code is an installer target.** It reads `.agents/skills` at both project and user scope, so it shares the folder Antigravity, Copilot, Codex, and OpenCode already use, and reads the same `AGENTS.md` pointer. No new folder, no new file.
-- **Kimi Code also has a plugin door.** The repo ships `.kimi-plugin/plugin.json`, which registers the six skills and points the system prompt at `rules/antislop.md`. Install it with `/plugins install https://github.com/miqdadbadjuber/anti-slop`. Documented from the vendor's own docs, not yet run in a live session.
-- **A motion comparison** sits above the FAQ: the same builds from See the difference, animated. The star history chart still sits between the FAQ and the contributors.
+- **The installed version is now on disk.** Every install route copies a `VERSION` file inside the `antislop` folder, so an update can name what you already have instead of asking you to look it up.
+- **The README has an Update section.** One row per route, next to the install commands it mirrors.
+- **Fenced examples in your entry file are safe again.** A fence line carrying an info string, three backticks followed by `js`, was read as the end of the block it sat inside, so the example lost its text on install. A closing fence may carry only spaces or tabs.
+- **Kimi Code was run for real.** v3.2.12 shipped that door on documentation alone. It has since been tested against a live Kimi Code install and works.
 
 Every earlier release, and what comes next, is in [ROADMAP.md](ROADMAP.md).
 
