@@ -184,7 +184,7 @@ for (const fence of ['```', '~~~']) {
   check(`J ${fence} real block added outside the example`, (read().match(/antislop:start/g) || []).length, 2)
   const first = read()
   updatePointers({ targets, skills })
-  check(`J ${fence} example stays intact on reinstall`, read(), first)
+  check(`J ${fence} example stays intact on reinstall`, read() === first, true)
 }
 
 // A stray end marker below the block is ours too, and must not survive.
