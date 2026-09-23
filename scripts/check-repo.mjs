@@ -21,6 +21,7 @@ const SKILLS = fs
   .map((e) => `skills/${e.name}/SKILL.md`)
 
 const MANIFESTS = [
+  'package.json',
   '.claude-plugin/plugin.json',
   '.claude-plugin/marketplace.json',
   '.codex-plugin/plugin.json',
@@ -103,6 +104,8 @@ function versions() {
   if (!want) return ['cli/package.json has no readable version']
 
   const found = [
+    // The Cline plugin manifest and, from v3.2.17, the Pi package. Same release.
+    ['package.json', json('package.json')?.version],
     ['.claude-plugin/plugin.json', json('.claude-plugin/plugin.json')?.version],
     ['.claude-plugin/marketplace.json', json('.claude-plugin/marketplace.json')?.plugins?.[0]?.version],
     ['.codex-plugin/plugin.json', json('.codex-plugin/plugin.json')?.version],

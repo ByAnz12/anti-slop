@@ -32,8 +32,8 @@ const fresh = detectAgents('project')
 check('A detected (fresh project)', fresh, [])
 const defaultTargets = resolveTargets('project')
 console.log('A default targets:', defaultTargets.map((t) => `${t.agents.map((a) => a.id).join('+')}@${t.path} exists=${t.exists}`).join(' | '))
-// Copilot and Kimi Code share Antigravity's folder, so nine agents resolve to seven folders.
-check('A nine agents over seven folders', [AGENTS.length, defaultTargets.length], [9, 7])
+// Copilot and Kimi Code share Antigravity's folder, so ten agents resolve to eight folders.
+check('A ten agents over eight folders', [AGENTS.length, defaultTargets.length], [10, 8])
 check('A copilot and kimi share the antigravity folder', resolveTargets('project', ['antigravity', 'copilot', 'kimi']).length, 1)
 
 // Claude Code only, via explicit selection (old behavior preserved).
@@ -70,6 +70,14 @@ for (const agent of ['opencode', 'cursor', 'gemini']) {
   check(`D2 ${agent} folder exists`, fs.existsSync(path.join(process.cwd(), agent === 'gemini' ? '.gemini' : agent === 'cursor' ? '.cursor' : '.opencode', 'skills', 'antislop', 'SKILL.md')), true)
 }
 
+// Cline keeps a folder of its own and reads .claude/skills beside it, so both fill up.
+const clineProject = resolveTargets('project', ['cline'])
+check('D8 cline project target', clineProject[0].path, path.join(process.cwd(), '.cline', 'skills'))
+check('D8 cline global target', resolveTargets('global', ['cline'])[0].path, path.join(os.homedir(), '.cline', 'skills'))
+check('D8 cline written', installSkills({ skills, targets: clineProject, overwrite: false }).length, 2)
+check('D8 cline pointer', updatePointers({ targets: clineProject, skills }).map((p) => path.basename(p)), ['AGENTS.md'])
+check('D8 cline folder exists', fs.existsSync(path.join(process.cwd(), '.cline', 'skills', 'antislop', 'SKILL.md')), true)
+
 // Hermes reads a project's .hermes/skills, and ~/.hermes/skills for a global install.
 const hermesProject = resolveTargets('project', ['hermes'])
 const hermesGlobal = resolveTargets('global', ['hermes'])
@@ -101,13 +109,15 @@ check('D6 hermes writes a project pointer', updatePointers({ targets: hermesProj
 
 // Detection now sees the agents that were installed.
 const after = detectAgents('project')
-check('E detected after installs', [...after].sort(), ['antigravity', 'claude', 'copilot', 'cursor', 'gemini', 'hermes', 'kimi', 'opencode'])
+check('E detected after installs', [...after].sort(), ['antigravity', 'claude', 'cline', 'copilot', 'cursor', 'gemini', 'hermes', 'kimi', 'opencode'])
 
 // OpenCode reads .claude/skills and .agents/skills too, so a project that installs into
 // two of them holds the same names twice and OpenCode picks between them unpredictably.
 const dupReads = detectDuplicateReads({ targets: resolveTargets('project', ['claude', 'opencode']), location: 'project' })
 check('E duplicate read named', dupReads.map((d) => [d.agent.id, d.paths.length]), [['opencode', 2]])
 check('E one folder alone is not a duplicate', detectDuplicateReads({ targets: resolveTargets('project', ['opencode']), location: 'project' }), [])
+// Cline reads .claude/skills beside its own folder, so Claude Code plus Cline collides.
+check('E cline duplicate read named', detectDuplicateReads({ targets: resolveTargets('project', ['claude', 'cline']), location: 'project' }).map((d) => [d.agent.id, d.paths.length]), [['cline', 2]])
 check('E global scope is not checked', detectDuplicateReads({ targets: resolveTargets('global', ['claude', 'opencode']), location: 'global' }), [])
 
 // Codex's global scope is the shared folder, not ~/.codex/skills, which Codex calls deprecated.

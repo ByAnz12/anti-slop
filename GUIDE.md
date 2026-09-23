@@ -36,18 +36,18 @@ There are four routes in, and the difference between them matters more than it l
 
 | Route | What it does | Works on |
 |-------|--------------|----------|
-| **The installer** | Copies the skill folders into your project or your home folder | Nine agents, no setup beyond a terminal |
+| **The installer** | Copies the skill folders into your project or your home folder | Ten agents, no setup beyond a terminal |
 | **The skills directory** | Copies the same folders using the skills.sh tool | The agents that directory supports |
-| **A plugin door** | Loads antislop straight from this repository, nothing copied | Claude Code, Antigravity, Codex, Cursor, Kimi Code |
+| **A plugin door** | Loads antislop straight from this repository, nothing copied | Claude Code, Antigravity, Codex, Cursor, Kimi Code, Cline |
 | **The single file** | One Markdown file you hand to any AI | Anything that reads text, including a phone |
 
 Pick one. They load the same rules, so adding a second only gives you a second thing to keep updated.
 
 ### Which route should I pick?
 
-- **The installer** if you want antislop in one project or everywhere, and you use any of the nine agents. It is the only route that covers OpenCode, Gemini CLI, Hermes, and GitHub Copilot, and the only one that detects your agents for you.
+- **The installer** if you want antislop in one project or everywhere, and you use any of the ten agents. It is the only route that covers OpenCode, Cline, Gemini CLI, Hermes, and GitHub Copilot, and the only one that detects your agents for you.
 - **The skills directory** if you already use that directory's tool and want the folders without the installer's questions. It writes no pointer, so antislop reloads by description alone.
-- **A plugin door** if you use Claude Code, Antigravity, Codex, Cursor, or Kimi Code and would rather not keep a copy in your project. You get updates from the plugin's own update command instead of re-running an installer.
+- **A plugin door** if you use Claude Code, Antigravity, Codex, Cursor, Kimi Code, or Cline and would rather not keep a copy in your project. You get updates from the plugin's own update command instead of re-running an installer.
 - **The single file** if you have no terminal, or you want antislop in a chat window or on a phone.
 
 ### Before you start
@@ -176,6 +176,18 @@ In a Kimi Code session:
 ```
 
 The URL resolves to the latest release. Plugin changes do not reach the session you ran the command in, so run `/reload` or `/new` afterwards. Kimi Code installs plugins per user, and has no project scope for them, so one install covers every project. Its `systemPromptPath` loads the antislop pointer in every session, so there is nothing else to do.
+
+#### Cline
+
+Cline plugins install from the CLI:
+
+```bash
+cline plugin install https://github.com/miqdadbadjuber/anti-slop.git
+```
+
+The plugin registers no tools and no hooks. Its whole payload is the `skills/` folder it bundles, which Cline discovers when the plugin is installed, so there is no pointer to write and nothing is copied into your project.
+
+**Read this before you pick it.** Cline's own documentation limits plugins to the SDK, the CLI, and Kanban, and states that the feature does not apply to the VS Code and JetBrains extensions. So this door is for a Cline CLI install. If you run Cline inside an editor, use the installer instead: it writes the same skills into `.cline/skills/`, which both the CLI and the extensions read.
 
 ---
 
@@ -317,6 +329,16 @@ Kimi Code has no plugin update command, so run the same install command again:
 
 `/plugins` then **Enter** on the antislop row in the **Installed** tab does the same. Either way, run `/reload` or `/new` after it.
 
+#### Cline
+
+Cline replaces an existing install only when you say so, so the update carries `--force`:
+
+```bash
+cline plugin install https://github.com/miqdadbadjuber/anti-slop.git --force
+```
+
+Without it, Cline keeps what is installed and tells you so.
+
 ### The single file
 
 Download the file again and replace your copy. There is nothing else to update, since this route installs no folders.
@@ -376,6 +398,10 @@ agent plugin marketplace remove anti-slop
 
 It asks for confirmation. `/plugins disable antislop` switches it off without removing it. Removing only deletes the installation record, so the copy under `$KIMI_CODE_HOME/plugins/managed/antislop/` (default `~/.kimi-code/plugins/managed/antislop/`) stays on disk until you delete it.
 
+#### Cline
+
+Cline documents no plugin uninstall command, only `cline plugin install`, so delete the plugin's folder under `~/.cline/plugins/_installed/` instead. Nothing was copied into your project, so that is the whole removal.
+
 ### The single file
 
 Delete the `antislop.md` file you downloaded. If you attached it to a chat project instead of keeping it as a file, remove it from that project's reference material.
@@ -395,6 +421,7 @@ The installer writes into the folder your agent reads. This is what it writes an
 | Antigravity | `.agents/skills/` |
 | OpenCode | `.opencode/skills/` |
 | Cursor | `.cursor/skills/` |
+| Cline | `.cline/skills/` |
 | Gemini CLI | `.gemini/skills/` |
 | Hermes | `.hermes/skills/` |
 | GitHub Copilot | `.agents/skills/` |
@@ -402,11 +429,11 @@ The installer writes into the folder your agent reads. This is what it writes an
 
 A global install writes the same folder under your home directory, with three exceptions. OpenCode documents its global skills folder as `~/.config/opencode/skills/`, so the installer writes there rather than to `~/.opencode/skills/`, which OpenCode still reads but does not document. Antigravity reads a project's `.agents/skills/`, but under your home directory it reads `~/.gemini/config/skills/` and not `~/.agents/skills/`, so the installer writes there on a global install. Codex goes the other way: it marks its own `~/.codex/skills/` as the deprecated user location and documents `~/.agents/skills/` in its place, so a global Codex install writes the shared folder. Copilot and Kimi Code read that same home-level folder, so a global install reaches them through the folder name a project install uses.
 
-Antigravity, Copilot, and Kimi Code share `.agents/skills/`. Copilot also reads `.github/skills/` and `.claude/skills/`, and Kimi Code also reads `.kimi-code/skills/`, but there is no reason to write a second copy, so picking them together installs once.
+Antigravity, Copilot, and Kimi Code share `.agents/skills/`. Copilot also reads `.github/skills/` and `.claude/skills/`, and Kimi Code also reads `.kimi-code/skills/`, but there is no reason to write a second copy, so picking them together installs once. Cline is the exception to the pattern: its own folder is `.cline/skills/`, and it reads `.claude/skills/` beside it, so there is a real second copy to worry about and the note below covers it.
 
-**One agent reading two of these is a problem.** OpenCode loads skills from `.opencode/skills/`, `.claude/skills/`, and `.agents/skills/`, and its documentation asks that skill names be unique across every location while never saying which copy wins if they are not. So if you install for OpenCode and for Claude Code, or for OpenCode and for Antigravity, the same skill names land in two folders it reads. The installer names that when it happens, and the fix is to remove the copy you do not need, usually the `.opencode/skills/` one, since OpenCode reads the other folder by its own documentation.
+**Two of these agents read more than one folder, and that is a problem.** OpenCode loads skills from `.opencode/skills/`, `.claude/skills/`, and `.agents/skills/`, and its documentation asks that skill names be unique across every location while never saying which copy wins if they are not. So if you install for OpenCode and for Claude Code, or for OpenCode and for Antigravity, the same skill names land in two folders it reads. The installer names that when it happens, and the fix is to remove the copy you do not need, usually the `.opencode/skills/` one, since OpenCode reads the other folder by its own documentation. Cline reads `.cline/skills/` and `.claude/skills/`, so installing it alongside Claude Code lands the same names in two folders it loads, and the installer names that the same way. Cline is also the one agent here that resolves a collision by itself when it comes from scope rather than from two folders: a global skill outranks a project skill of the same name, the reverse of every other agent in this table, so a stale global install silently wins over a fresh project one.
 
-On a project install the installer also writes the pointer that reloads antislop every session: into the project's `AGENTS.md` for Codex, Antigravity, OpenCode, Cursor, Hermes, Copilot, and Kimi Code, into `CLAUDE.md` for Claude Code, and into `GEMINI.md` for Gemini CLI. For OpenCode that is the whole mechanism: it loads the skill folders from `.opencode/skills/` and reads the pointer from `AGENTS.md`, which was verified against the opencode CLI.
+On a project install the installer also writes the pointer that reloads antislop every session: into the project's `AGENTS.md` for Codex, Antigravity, OpenCode, Cursor, Cline, Hermes, Copilot, and Kimi Code, into `CLAUDE.md` for Claude Code, and into `GEMINI.md` for Gemini CLI. For OpenCode that is the whole mechanism: it loads the skill folders from `.opencode/skills/` and reads the pointer from `AGENTS.md`, which was verified against the opencode CLI.
 
 **Claude Code reads `AGENTS.md` too, since v2.1.277.** antislop still writes `CLAUDE.md` for it, because the two are not equal: Claude reads `AGENTS.md` only when no `CLAUDE.md` or `CLAUDE.local.md` exists in the working directory or any directory above it. In a project that has one, an `AGENTS.md`-only pointer would be ignored without an error. The setting under **Project instructions** in `/config` can change that, and `AGENTS.md` is not read at all on Bedrock, Vertex, or Foundry.
 
@@ -446,7 +473,7 @@ If your `DESIGN.md` happens to ask for something antislop counts as slop, it doe
 
 ## Where is this going?
 
-antislop is packaged three ways at once: standard skill folders, native plugins for Claude Code, Antigravity, Codex, Cursor, and Kimi Code, and the single-file core that works anywhere. Agent support grows over time. For the current release and what comes next, see the [roadmap](ROADMAP.md). For the full picture of every skill, see the [README](README.md).
+antislop is packaged three ways at once: standard skill folders, native plugins for Claude Code, Antigravity, Codex, Cursor, Kimi Code, and Cline, and the single-file core that works anywhere. Agent support grows over time. For the current release and what comes next, see the [roadmap](ROADMAP.md). For the full picture of every skill, see the [README](README.md).
 
 ## Feedback
 

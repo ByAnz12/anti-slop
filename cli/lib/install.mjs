@@ -33,6 +33,9 @@ export const AGENTS = [
   // OpenCode documents ~/.config/opencode for global skills; ~/.opencode is undocumented.
   { id: 'opencode', label: 'OpenCode', dir: '.opencode/skills', globalDir: '.config/opencode/skills', readsAlso: ['.claude/skills', '.agents/skills'], entry: 'AGENTS.md' },
   { id: 'cursor', label: 'Cursor', dir: '.cursor/skills', entry: 'AGENTS.md' },
+  // Cline reads .claude/skills as well as its own folder, so the two collide in one
+  // project. A global skill outranks a project one here, the reverse of every other row.
+  { id: 'cline', label: 'Cline', dir: '.cline/skills', readsAlso: ['.claude/skills'], entry: 'AGENTS.md' },
   { id: 'gemini', label: 'Gemini CLI', dir: '.gemini/skills', entry: 'GEMINI.md' },
   // Hermes reads a project's .hermes/skills and .agents/skills, project tier first.
   { id: 'hermes', label: 'Hermes', dir: '.hermes/skills', readsAlso: ['.agents/skills'], entry: 'AGENTS.md' },
@@ -74,8 +77,8 @@ export function resolveTargets(location, selected = AGENTS.map((a) => a.id)) {
   return [...byPath.values()]
 }
 
-// OpenCode and Hermes read more than one project folder, so installing into two of them
-// puts the same skill names in both. Neither documents which copy wins, so name it.
+// OpenCode, Hermes, and Cline read more than one project folder, so installing into two
+// of them puts the same names in both. None documents which copy wins, so name it.
 export function detectDuplicateReads({ targets, location }) {
   if (location !== 'project') return []
   const paths = new Set(targets.map((t) => t.path))

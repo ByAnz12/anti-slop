@@ -138,6 +138,16 @@ The same repo is a Kimi Code plugin. Install it in a Kimi Code session, then sta
 
 The URL resolves to the latest release. Kimi Code installs plugins per user, so this covers every project.
 
+### 8. The plugin (Cline)
+
+The same repo is a Cline plugin. Install it with the Cline CLI:
+
+```bash
+cline plugin install https://github.com/miqdadbadjuber/anti-slop.git
+```
+
+The plugin ships no tools and no hooks. Its whole payload is the `skills/` folder it bundles, which Cline discovers on install. This has to be said plainly: Cline's own documentation limits plugins to the SDK, the CLI, and Kanban, and says the feature does not apply to the VS Code and JetBrains extensions yet. So this door covers a Cline CLI install and not an editor install, and the installer in path 1 is the route for an editor.
+
 ### Where the skills live
 
 Every skill is a folder of the open Agent Skills standard (`<name>/SKILL.md`), so it drops into any agent that reads the standard. The installer (path 1) installs into whichever of these you use, creating the folder if it is missing:
@@ -149,6 +159,7 @@ Every skill is a folder of the open Agent Skills standard (`<name>/SKILL.md`), s
 | Antigravity | `.agents/skills/` |
 | OpenCode | `.opencode/skills/` |
 | Cursor | `.cursor/skills/` |
+| Cline | `.cline/skills/` |
 | Gemini CLI | `.gemini/skills/` |
 | Hermes | `.hermes/skills/` |
 | GitHub Copilot | `.agents/skills/` |
@@ -157,6 +168,8 @@ Every skill is a folder of the open Agent Skills standard (`<name>/SKILL.md`), s
 The Gemini CLI row is legacy support: Antigravity replaced it, but the installer still writes there for existing setups.
 
 Antigravity, Copilot, and Kimi Code share one folder. Copilot also reads `.github/skills/` and `.claude/skills/`, and Kimi Code also reads `.kimi-code/skills/`, but the installer writes the folder they have in common, so picking them together installs antislop once.
+
+Cline is the one agent that keeps a folder of its own and reads another one the installer writes: it loads `.cline/skills/` and `.claude/skills/`, so installing both Claude Code and Cline puts the same names in two folders Cline reads, and the installer names that collision. It also resolves a name collision the other way round from every other agent here: a global skill outranks a project one.
 
 Those are the project paths. A global install writes the same folder under your home directory, with three exceptions: OpenCode writes to `~/.config/opencode/skills/`, Antigravity to `~/.gemini/config/skills/`, and Codex to `~/.agents/skills/`, the user-level folder Codex documents in place of its own `~/.codex/skills/`. Copilot, OpenCode, and Kimi Code read that home-level folder too, so it is where a global install reaches them.
 
@@ -183,6 +196,7 @@ antislop does not update itself and nothing tells you a release is out. Every ro
 | The plugin (Codex) | `codex plugin marketplace upgrade anti-slop` |
 | The plugin (Cursor) | `agent plugin marketplace update https://github.com/miqdadbadjuber/anti-slop` |
 | The plugin (Kimi Code) | `/plugins install https://github.com/miqdadbadjuber/anti-slop` |
+| The plugin (Cline) | `cline plugin install https://github.com/miqdadbadjuber/anti-slop.git --force` |
 | Manual | download `antislop.md` again |
 
 Skills load when a session starts, so start a new one afterwards. To see which version you are on, open the `VERSION` file in the installed `antislop` folder, or ask your agent. [GUIDE.md](GUIDE.md#update) covers each route step by step.
@@ -217,12 +231,10 @@ antislop is used one of two ways, chosen at the start of a session:
 
 ## Roadmap
 
-**v3.2.13** is the current release.
+**v3.2.14** is the current release.
 
-- **The installed version is now on disk.** Every install route copies a `VERSION` file inside the `antislop` folder, so an update can name what you already have instead of asking you to look it up.
-- **The README has an Update section.** One row per route, next to the install commands it mirrors.
-- **Fenced examples in your entry file are safe again.** A fence line carrying an info string, three backticks followed by `js`, was read as the end of the block it sat inside, so the example lost its text on install. A closing fence may carry only spaces or tabs.
-- **Kimi Code was run for real.** v3.2.12 shipped that door on documentation alone. It has since been tested against a live Kimi Code install and works.
+- **Cline joins as an installer target.** It is the first agent here that reads a folder of its own, `.cline/skills/`, and one the installer already writes, `.claude/skills/`, so picking it with Claude Code puts the same skills in two folders it reads and the installer names that. It also resolves a shared name the other way round from every other agent: a global skill outranks a project one.
+- **Cline also has a plugin door.** The repository root is now a Cline plugin. `package.json` declares the entry point and the plugin bundles the six skill folders, so there is nothing to copy into your project. Cline's documentation limits plugins to the SDK, the CLI, and Kanban, so this door covers a CLI install and not an editor install.
 
 Every earlier release, and what comes next, is in [ROADMAP.md](ROADMAP.md).
 
@@ -242,8 +254,8 @@ No, a filter. It does not prescribe colors, fonts, or layouts. It rejects techni
 
 All of them, but the install paths differ:
 
-- **The installer and the skills directory** support Claude Code, Codex, Antigravity, OpenCode, Cursor, Gemini CLI, Hermes, GitHub Copilot, and Kimi Code (the installer detects each agent's skill folder). These are the recommended paths.
-- **The plugins** are per-agent doors: the Claude Code marketplace plugin (path 3), the Antigravity plugin (path 4), the Codex plugin (path 5), the Cursor plugin (path 6), and the Kimi Code plugin (path 7), all installed from the same repo.
+- **The installer and the skills directory** support Claude Code, Codex, Antigravity, OpenCode, Cursor, Cline, Gemini CLI, Hermes, GitHub Copilot, and Kimi Code (the installer detects each agent's skill folder). These are the recommended paths.
+- **The plugins** are per-agent doors: the Claude Code marketplace plugin (path 3), the Antigravity plugin (path 4), the Codex plugin (path 5), the Cursor plugin (path 6), the Kimi Code plugin (path 7), and the Cline plugin (path 8), all installed from the same repo.
 - **The single file** (`antislop.md`) works with any agent that reads plain Markdown, including a plain chat window.
 
 The packaged skills use the open Agent Skills standard (folder per skill), so they drop into any tool that reads the standard.
