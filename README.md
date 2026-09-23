@@ -160,6 +160,7 @@ Every skill is a folder of the open Agent Skills standard (`<name>/SKILL.md`), s
 | OpenCode | `.opencode/skills/` |
 | Cursor | `.cursor/skills/` |
 | Cline | `.cline/skills/` |
+| Amp | `.agents/skills/` |
 | Gemini CLI | `.gemini/skills/` |
 | Hermes | `.hermes/skills/` |
 | GitHub Copilot | `.agents/skills/` |
@@ -167,11 +168,11 @@ Every skill is a folder of the open Agent Skills standard (`<name>/SKILL.md`), s
 
 The Gemini CLI row is legacy support: Antigravity replaced it, but the installer still writes there for existing setups.
 
-Antigravity, Copilot, and Kimi Code share one folder. Copilot also reads `.github/skills/` and `.claude/skills/`, and Kimi Code also reads `.kimi-code/skills/`, but the installer writes the folder they have in common, so picking them together installs antislop once.
+Antigravity, Copilot, Kimi Code, and Amp share one folder. Copilot also reads `.github/skills/` and `.claude/skills/`, and Kimi Code also reads `.kimi-code/skills/`, but the installer writes the folder they have in common, so picking them together installs antislop once.
 
-Cline is the one agent that keeps a folder of its own and reads another one the installer writes: it loads `.cline/skills/` and `.claude/skills/`, so installing both Claude Code and Cline puts the same names in two folders Cline reads, and the installer names that collision. It also resolves a name collision the other way round from every other agent here: a global skill outranks a project one.
+Cline and Amp both keep a folder of their own and still read one the installer writes. Cline loads `.cline/skills/` and Amp the shared `.agents/skills/`, and both also load `.claude/skills/`, so installing either alongside Claude Code puts the same names in two folders they read, and the installer names that collision. Both also resolve a collision that comes from scope in the same unusual direction, and their own documentation is the source: a global skill outranks a project one, so a stale global install silently wins over a fresh project one. The rest of the agents here do not document which copy wins.
 
-Those are the project paths. A global install writes the same folder under your home directory, with three exceptions: OpenCode writes to `~/.config/opencode/skills/`, Antigravity to `~/.gemini/config/skills/`, and Codex to `~/.agents/skills/`, the user-level folder Codex documents in place of its own `~/.codex/skills/`. Copilot, OpenCode, and Kimi Code read that home-level folder too, so it is where a global install reaches them.
+Those are the project paths. A global install writes the same folder under your home directory, with four exceptions: OpenCode writes to `~/.config/opencode/skills/`, Antigravity to `~/.gemini/config/skills/`, Codex to `~/.agents/skills/`, the user-level folder Codex documents in place of its own `~/.codex/skills/`, and Amp to `~/.config/agents/skills/`. Copilot, OpenCode, and Kimi Code read that home-level folder too, so it is where a global install reaches them.
 
 Hermes needs one extra step after a project install: it will not load skills out of a cloned repository until you run `hermes skills trust` once in that project.
 
@@ -231,10 +232,11 @@ antislop is used one of two ways, chosen at the start of a session:
 
 ## Roadmap
 
-**v3.2.14** is the current release.
+**v3.2.15** is the current release.
 
-- **Cline joins as an installer target.** It is the first agent here that reads a folder of its own, `.cline/skills/`, and one the installer already writes, `.claude/skills/`, so picking it with Claude Code puts the same skills in two folders it reads and the installer names that. It also resolves a shared name the other way round from every other agent: a global skill outranks a project one.
-- **Cline also has a plugin door.** The repository root is now a Cline plugin. `package.json` declares the entry point and the plugin bundles the six skill folders, so there is nothing to copy into your project. Cline's documentation limits plugins to the SDK, the CLI, and Kanban, so this door covers a CLI install and not an editor install.
+- **Amp joins as an installer target.** It reads the shared `.agents/skills/` in a project, so picking it with Antigravity, Copilot, or Kimi Code installs antislop once. Under your home directory it reads `~/.config/agents/skills/`, a folder of its own, so a global install is the only one that writes somewhere new.
+- **A claim from the last release is corrected.** v3.2.14 said Cline was the only agent here that lets a global skill outrank a project one. Amp documents the same order, so the sentence now names both and stops speaking for the rest, whose documentation does not settle it.
+- **Amp gets no plugin door.** Cline bundles skills by dropping them in a `skills/` folder and scanning it. Amp does not scan one: every skill has to be registered by code, single-file plugins cannot register any, and the one-command install takes only single files. The installer row is the whole door.
 
 Every earlier release, and what comes next, is in [ROADMAP.md](ROADMAP.md).
 
@@ -254,7 +256,7 @@ No, a filter. It does not prescribe colors, fonts, or layouts. It rejects techni
 
 All of them, but the install paths differ:
 
-- **The installer and the skills directory** support Claude Code, Codex, Antigravity, OpenCode, Cursor, Cline, Gemini CLI, Hermes, GitHub Copilot, and Kimi Code (the installer detects each agent's skill folder). These are the recommended paths.
+- **The installer and the skills directory** support Claude Code, Codex, Antigravity, OpenCode, Cursor, Cline, Amp, Gemini CLI, Hermes, GitHub Copilot, and Kimi Code (the installer detects each agent's skill folder). These are the recommended paths.
 - **The plugins** are per-agent doors: the Claude Code marketplace plugin (path 3), the Antigravity plugin (path 4), the Codex plugin (path 5), the Cursor plugin (path 6), the Kimi Code plugin (path 7), and the Cline plugin (path 8), all installed from the same repo.
 - **The single file** (`antislop.md`) works with any agent that reads plain Markdown, including a plain chat window.
 

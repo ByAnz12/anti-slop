@@ -36,6 +36,9 @@ export const AGENTS = [
   // Cline reads .claude/skills as well as its own folder, so the two collide in one
   // project. A global skill outranks a project one here, the reverse of every other row.
   { id: 'cline', label: 'Cline', dir: '.cline/skills', readsAlso: ['.claude/skills'], entry: 'AGENTS.md' },
+  // Amp shares the project's .agents/skills but keeps a global folder of its own, and it
+  // also loads .claude/skills. Its user path outranks the project one.
+  { id: 'amp', label: 'Amp', dir: '.agents/skills', globalDir: '.config/agents/skills', readsAlso: ['.claude/skills'], entry: 'AGENTS.md' },
   { id: 'gemini', label: 'Gemini CLI', dir: '.gemini/skills', entry: 'GEMINI.md' },
   // Hermes reads a project's .hermes/skills and .agents/skills, project tier first.
   { id: 'hermes', label: 'Hermes', dir: '.hermes/skills', readsAlso: ['.agents/skills'], entry: 'AGENTS.md' },
@@ -77,8 +80,8 @@ export function resolveTargets(location, selected = AGENTS.map((a) => a.id)) {
   return [...byPath.values()]
 }
 
-// OpenCode, Hermes, and Cline read more than one project folder, so installing into two
-// of them puts the same names in both. None documents which copy wins, so name it.
+// OpenCode, Hermes, Cline, and Amp read more than one project folder, so installing into
+// two of them puts the same names in both. None documents which copy wins, so name it.
 export function detectDuplicateReads({ targets, location }) {
   if (location !== 'project') return []
   const paths = new Set(targets.map((t) => t.path))
