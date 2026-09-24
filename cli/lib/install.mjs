@@ -103,6 +103,88 @@ export function detectAgents(location) {
   return AGENTS.filter((a) => fs.existsSync(path.dirname(skillPath(a, location)))).map((a) => a.id)
 }
 
+// The plugin doors keep a copy of their own under a vendor path, and none of those paths
+// is documented as a stable interface. These probes only read, and a miss stays silent.
+function readJSON(file) {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'))
+  } catch {
+    return null
+  }
+}
+
+function listDirs(dir) {
+  try {
+    return fs.readdirSync(dir, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name)
+  } catch {
+    return []
+  }
+}
+
+// A door that cloned the repo carries the VERSION file; one cloned before it shipped
+// does not, and an unknown version is reported as unknown rather than guessed.
+function cloneVersion(dir) {
+  try {
+    return fs.readFileSync(path.join(dir, 'skills', CORE, 'VERSION'), 'utf8').trim()
+  } catch {
+    return null
+  }
+}
+
+function findClone(dir) {
+  return fs.existsSync(dir) ? { path: dir, version: cloneVersion(dir) } : null
+}
+
+const claudePlugins = () => path.join(os.homedir(), '.claude', 'plugins', 'installed_plugins.json')
+
+export const PLUGIN_DOORS = [
+  {
+    id: 'claude',
+    label: 'Claude Code',
+    update: 'claude plugin update antislop@anti-slop',
+    find() {
+      const entry = readJSON(claudePlugins())?.plugins?.['antislop@anti-slop']?.[0]
+      return entry ? { path: entry.installPath ?? claudePlugins(), version: entry.version ?? null } : null
+    },
+  },
+  {
+    id: 'antigravity',
+    label: 'Antigravity',
+    update: 'agy plugin install https://github.com/miqdadbadjuber/anti-slop',
+    find: () => findClone(path.join(os.homedir(), '.gemini', 'config', 'plugins', CORE)),
+  },
+  {
+    id: 'codex',
+    label: 'Codex',
+    update: 'codex plugin marketplace upgrade anti-slop',
+    find() {
+      const cache = path.join(os.homedir(), '.codex', 'plugins', 'cache', 'anti-slop', CORE)
+      const versions = listDirs(cache).sort()
+      return versions.length ? { path: cache, version: versions[versions.length - 1] } : null
+    },
+  },
+  {
+    id: 'cursor',
+    label: 'Cursor',
+    update: 'agent plugin marketplace update https://github.com/miqdadbadjuber/anti-slop',
+    find: () => findClone(path.join(os.homedir(), '.cursor', 'plugins', 'local', 'anti-slop')),
+  },
+]
+
+// A door that moves its files breaks its own probe and nothing else: the installer stops
+// naming that door instead of failing, which is the whole reason a miss has to be silent.
+export function detectPluginDoors() {
+  return PLUGIN_DOORS.flatMap((door) => {
+    let found = null
+    try {
+      found = door.find()
+    } catch {
+      found = null
+    }
+    return found ? [{ door, ...found }] : []
+  })
+}
+
 export function detectConflicts({ skills, targets }) {
   const conflicts = []
   for (const t of targets) {
@@ -158,6 +240,8 @@ const SKILL_LINES = {
   'antislop-code': 'Code comments: `antislop-code`',
 }
 
+export const SKILL_NAMES = Object.keys(SKILL_LINES)
+
 // Names the skills rather than importing the core: an `@` import pulls all 46 KB
 // of it into every session, including ones that touch no UI.
 function pointerBlock(skills) {
@@ -167,6 +251,7 @@ function pointerBlock(skills) {
     'For UI, copy, people, mobile layout, or code comments work, load the antislop skill for the task:',
     ...skills.filter((s) => SKILL_LINES[s]).map((s) => `- ${SKILL_LINES[s]}`),
     'Before starting, ask the user when antislop applies: during the work, or after it is done.',
+    'To update antislop later: `npx antislop-ai --update`, or run `npx antislop-ai` and pick Overwrite them.',
     POINTER_END,
   ]
 }
@@ -255,4 +340,34 @@ export function updatePointers({ targets, skills }) {
     written.push(entry)
   }
   return written
+}
+
+// `--update` replaces every antislop folder already on this machine, at both scopes and
+// with no prompts. Each folder keeps the skill selection it was installed with. The scope
+// list is a parameter so a test never writes into the home directory it runs under.
+export function updateAll({ locations = ['project', 'global'] } = {}) {
+  const results = []
+  const projectTargets = []
+  const projectSkills = new Set()
+
+  for (const location of locations) {
+    for (const target of resolveTargets(location)) {
+      if (!fs.existsSync(path.join(target.path, CORE))) continue
+      const skills = SKILL_NAMES.filter((s) => fs.existsSync(path.join(target.path, s)))
+      if (skills.length === 0) continue
+      const from = installedVersion(target.path)
+      installSkills({ skills, targets: [target], overwrite: true })
+      results.push({ location, path: target.path, agents: target.agents.map((a) => a.id), skills, from, to: VERSION })
+      if (location === 'project') {
+        projectTargets.push(target)
+        for (const s of skills) projectSkills.add(s)
+      }
+    }
+  }
+
+  // One block per entry file, so the union of every project folder's skills is the list.
+  const pointers = projectTargets.length > 0
+    ? updatePointers({ targets: projectTargets, skills: [...projectSkills] })
+    : []
+  return { results, pointers }
 }

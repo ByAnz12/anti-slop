@@ -186,7 +186,13 @@ curl -o antislop.md https://raw.githubusercontent.com/miqdadbadjuber/anti-slop/m
 
 ## Update
 
-antislop does not update itself and nothing tells you a release is out. Every route updates by running its own command again:
+antislop does not update itself and nothing tells you a release is out. Every route updates by running its own command again. If you installed through the installer or the skills directory, one command replaces whatever is already there, in this project and in your home directory, and asks nothing:
+
+```bash
+npx antislop-ai --update
+```
+
+It prints the release it replaced beside the one it wrote. It cannot touch a plugin install, because a plugin keeps a copy of its own under the agent that installed it, so it names the exact command for any plugin door it finds on your machine.
 
 | Route | Update it with |
 |-------|----------------|
@@ -232,11 +238,11 @@ antislop is used one of two ways, chosen at the start of a session:
 
 ## Roadmap
 
-**v3.2.15** is the current release.
+**v3.2.16** is the current release.
 
-- **Amp joins as an installer target.** It reads the shared `.agents/skills/` in a project, so picking it with Antigravity, Copilot, or Kimi Code installs antislop once. Under your home directory it reads `~/.config/agents/skills/`, a folder of its own, so a global install is the only one that writes somewhere new.
-- **A claim from the last release is corrected.** v3.2.14 said Cline was the only agent here that lets a global skill outrank a project one. Amp documents the same order, so the sentence now names both and stops speaking for the rest, whose documentation does not settle it.
-- **Amp gets no plugin door.** Cline bundles skills by dropping them in a `skills/` folder and scanning it. Amp does not scan one: every skill has to be registered by code, single-file plugins cannot register any, and the one-command install takes only single files. The installer row is the whole door.
+- **Updating is one command.** `npx antislop-ai --update` replaces every antislop folder it finds, in this project and in your home directory, keeps the skill selection each folder was installed with, and prints the release it replaced. It asks nothing, so it also works in a script.
+- **The installer names your plugin doors.** A plugin keeps a copy of its own that `--update` cannot reach, so it used to be a silent gap. The installer now reads the four vendor stores it can (Claude Code, Antigravity, Codex, Cursor), reports the version it finds there, and prints the exact update command for each. A door that changes its layout stops being named rather than breaking the run.
+- **Your agent answers the update question in the session.** The pointer block the installer writes into `AGENTS.md` and `CLAUDE.md`, and the block in `antislop.md`, now carry the update line, and the core lists the six plugin commands instead of deferring to `GUIDE.md`. That question used to be answerable only by a maintainer reading the guide.
 
 Every earlier release, and what comes next, is in [ROADMAP.md](ROADMAP.md).
 

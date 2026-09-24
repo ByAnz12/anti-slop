@@ -234,11 +234,23 @@ The installer, the skills directory, and the plugin doors all need a terminal, s
 
 ## Update
 
-Nothing here is automatic unless a route below says it is. Every route updates by running that route's own command again, or by replacing the copy you made. Whichever route you use, your agent loads skills when a session starts, so close the session you are in and open a new one afterwards. Until you do, the old rules are still the ones loaded.
+Nothing here is automatic unless a route below says it is. Every route updates by running that route's own command again, or by replacing the copy you made. If you installed through the installer or the skills directory, you can skip straight to **One command, both file routes** below; the rest of this section is for the plugin doors and the single file. Whichever route you use, your agent loads skills when a session starts, so close the session you are in and open a new one afterwards. Until you do, the old rules are still the ones loaded.
 
 **First, how do you know a new version is out?** Nothing notifies you. Two places always carry the current one: the [releases page](https://github.com/miqdadbadjuber/anti-slop/releases) and the version badge at the top of the [README](README.md).
 
 **And which one do you have?** The installed `antislop` folder holds a `VERSION` file naming the release it came from. Open it, or ask your agent "which antislop version is installed?" and it reads the file for you. A folder with no `VERSION` file predates that file, so it is old enough to update without checking anything else. The installer route can skip this entirely: it prints both versions itself.
+
+### One command, both file routes
+
+The installer and the skills directory write the same files into the same folders, and nothing on disk records which one you used, so there is one command that covers both:
+
+```bash
+npx antislop-ai --update
+```
+
+It looks in the current project and in your home directory, replaces every antislop folder it finds, keeps the skill selection each folder was installed with, and prints the release it replaced next to the one it wrote. It asks nothing, so it is also the one to use in a script.
+
+It cannot reach a plugin install. A plugin keeps its own copy under the agent that installed it, which is why the same command also reads the plugin stores it can find and prints the update command for each door it sees. The plugin doors section below covers them one by one, and the two routes it does cover are the two below.
 
 ### The installer
 

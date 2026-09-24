@@ -3,6 +3,8 @@ import os from 'node:os'
 import path from 'node:path'
 import {
   AGENTS,
+  CORE,
+  PLUGIN_DOORS,
   skillSourceDir,
   resolveTargets,
   detectAgents,
@@ -10,6 +12,7 @@ import {
   detectDuplicateReads,
   installSkills,
   installedVersion,
+  updateAll,
   updatePointers,
   VERSION,
 } from '../lib/install.mjs'
@@ -223,6 +226,31 @@ write('# Mine\n<!-- antislop:start -->\nX\n<!-- antislop:end -->\nKeep this too.
 updatePointers({ targets, skills })
 check('J duplicate pair settles to one', (read().match(/antislop:start/g) || []).length, 1)
 check('J duplicate pair keeps text', read().includes('Keep this too.'), true)
+
+// --update replaces what is already on disk, keeps each folder's skill selection, and
+// names the release it replaced. The scope list keeps a test out of the home directory.
+const present = resolveTargets('project').filter((t) => fs.existsSync(path.join(t.path, CORE)))
+check('K update finds the installed folders', present.length > 0, true)
+const upd = updateAll({ locations: ['project'] })
+check('K update reports every folder it found', upd.results.length, present.length)
+check('K update lands on this release', upd.results.every((r) => r.to === VERSION), true)
+check('K update keeps the skill selection', upd.results.every((r) => r.skills.includes(CORE)), true)
+check('K update writes a pointer', upd.pointers.length > 0, true)
+check('K pointer carries the update line', fs.readFileSync(path.join(process.cwd(), 'AGENTS.md'), 'utf8').includes('antislop-ai --update'), true)
+const again = updateAll({ locations: ['project'] })
+check('K update is repeatable', again.results.map((r) => r.from), upd.results.map((r) => r.to))
+
+// A clean directory has nothing to replace, and saying so is the whole answer.
+const clean = fs.mkdtempSync(path.join(os.tmpdir(), 'antislop-clean-'))
+const here = process.cwd()
+process.chdir(clean)
+check('K update says nothing when nothing is installed', updateAll({ locations: ['project'] }).results.length, 0)
+check('K update writes no pointer when nothing is installed', updateAll({ locations: ['project'] }).pointers.length, 0)
+process.chdir(here)
+fs.rmSync(clean, { recursive: true, force: true })
+
+// A door row without a command would print a blank line where the answer belongs.
+check('K every plugin door names itself and its command', PLUGIN_DOORS.filter((d) => !d.id || !d.label || !d.update).map((d) => d.id), [])
 
 if (failures.length > 0) {
   console.error(`\n${failures.length} check(s) failed: ${failures.join(', ')}`)
