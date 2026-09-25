@@ -1,0 +1,35 @@
+name: Sync Fork with Upstream
+
+on:
+  schedule:
+    # Jalan tiap hari jam 03:00 UTC (~10:00 WIB). Ubah sesuai kebutuhan.
+    - cron: '0 3 * * *'
+  workflow_dispatch: {}  # tombol "Run workflow" manual di tab Actions
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    # Pengaman: workflow ini hanya jalan di repo fork kamu, bukan kalau
+    # file ini ikut ter-fetch/ter-copy ke repo lain.
+    if: github.repository == 'ByAnz12/anti-slop'
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Tambah remote upstream
+        run: git remote add upstream https://github.com/miqdadbadjuber/anti-slop.git
+
+      - name: Fetch upstream
+        run: git fetch upstream main
+
+      - name: Fast-forward merge dari upstream
+        run: git merge upstream/main --ff-only
+
+      - name: Push ke fork
+        run: git push origin main
